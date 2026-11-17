@@ -156,6 +156,9 @@ pre.tpl{background:var(--panel2);border:1px solid var(--line2);border-radius:8px
 .qstats span{color:var(--muted);font-size:12px}
 .h2{font-size:18px;font-weight:600;margin:0 0 12px}
 @media (max-width:820px){.quest{padding:20px}.quest h1{font-size:26px}.quest .qtop{flex-direction:column}.qstats{grid-template-columns:1fr 1fr}}
+.done-badge{display:inline-block;margin-top:4px;font-size:12px;font-weight:600;color:#0b0f08;background:linear-gradient(90deg,#ffd76a,var(--lime));border-radius:99px;padding:3px 10px;white-space:nowrap;box-shadow:0 0 14px rgba(184,242,106,.35)}
+.ehead .done-badge{font-size:13px;margin:6px 0 4px}
+tr.row-done td{background:rgba(184,242,106,.06)}
 /* zapis view */
 .picker{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
 .pick{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:99px;border:1px solid var(--line2);background:var(--panel);font-weight:500}
@@ -295,6 +298,8 @@ const people=()=>[...state.people].sort(byOrder);
 function colorFor(id,list){const i=list.findIndex(x=>x.id===id);return PALETTE[(i<0?0:i)%PALETTE.length]}
 function tgt(p,m){const t=Number((p.targets||{})[m.id]);return t>0?t:0}
 function countMap(){const m={};for(const e of state.entries){const k=e.personId+"|"+e.metricId;m[k]=(m[k]||0)+1}return m}
+const isDone=st=>st.target>0&&st.done>=st.target;
+const DONE_BADGE=`<span class="done-badge">🧳 Mise splněna – bal kufry!</span>`;
 function pct(d,t){return t>0?Math.round(Math.min(d,t)/t*100):0}
 function personStats(p,ms,cm){let d=0,t=0,raw=0;for(const m of ms){const tt=tgt(p,m),dd=cm[p.id+"|"+m.id]||0;raw+=dd;if(tt){t+=tt;d+=Math.min(dd,tt)}}return{done:d,target:t,raw,pct:pct(d,t)}}
 function ago(ts){const s=(Date.now()-ts)/1000;if(s<60)return"právě teď";if(s<3600)return Math.floor(s/60)+" min";if(s<86400)return Math.floor(s/3600)+" h";return new Date(ts).toLocaleDateString("cs-CZ",{day:"numeric",month:"short"})}
@@ -354,8 +359,9 @@ function viewDashboard(){
       if(!t&&!d)return`<td class="goal"><span class="na">— bez cíle</span></td>`;
       return`<td class="goal"><div class="gt"><b>${d}${t?` <span>/ ${t}</span>`:""}</b><span>${t?pct(d,t)+" %":""}</span></div>
         ${bar(t?pct(d,t):100)}</td>`}).join("");
-    return`<tr class="ov-row" data-act="goPerson" data-p="${esc(p.id)}" title="Otevřít v Zapisování"><td><div class="who"><div class="av" style="background:${col}">${esc(initials(p.name))}</div><div><b>${esc(p.name)}</b><span>${s.raw} ${lidi(s.raw)} celkem</span></div></div></td>${goals}
-      <td class="tot">${s.pct} %<small>${s.done} / ${s.target}</small></td></tr>`}).join("")||`<tr><td colspan="${visMs.length+2}" class="empty">Zatím nikdo</td></tr>`;
+    const fin=isDone(s);
+    return`<tr class="ov-row ${fin?"row-done":""}" data-act="goPerson" data-p="${esc(p.id)}" title="Otevřít v Zapisování"><td><div class="who"><div class="av" style="background:${col}">${esc(initials(p.name))}</div><div><b>${esc(p.name)}</b>${fin?DONE_BADGE:`<span>${s.raw} ${lidi(s.raw)} celkem</span>`}</div></div></td>${goals}
+      <td class="tot">${fin?"🏝️ ":""}${s.pct} %<small>${s.done} / ${s.target}</small></td></tr>`}).join("")||`<tr><td colspan="${visMs.length+2}" class="empty">Zatím nikdo</td></tr>`;
 
   const left=Math.max(0,tT-tD);
   return`<section class="quest">
@@ -365,7 +371,7 @@ function viewDashboard(){
     <div class="journey"><div class="track" data-target="${teamPct}"><i style="width:${ui.lastPct}%"></i><span class="plane" style="left:${ui.lastPct}%"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></span></div><span class="isle">🏝️</span></div>
     <div class="qstats">
       <div><b>${teamPct} %</b><span>cesty za námi</span></div>
-      <div><b>${left}</b><span>${left?"lidí zbývá do odletu":"MISE SPLNĚNA – balte kufry!"}</span></div>
+      <div><b>${left}</b><span>${left?"lidí zbývá do odletu":"CELÝ TÝM LETÍ NA OSTROV! 🛫"}</span></div>
       <div><b>${total}</b><span>přivedeno celkem</span></div>
       <div><b>+${week}</b><span>za posledních 7 dní</span></div>
     </div>
@@ -389,7 +395,7 @@ function viewEntry(){
   if(!ms.length||!ps.length)return header("Zapisování")+`<div class="sec"><h3>Nejdřív přidej lidi a úkoly</h3><a class="btn pri" href="#nastaveni" style="text-decoration:none">Otevřít nastavení</a></div>`;
   if(!ps.some(p=>p.id===ui.person))ui.person=ps[0].id;
   const p=ps.find(x=>x.id===ui.person),s=personStats(p,ms,cm);
-  const picker=ps.map(x=>{const st=personStats(x,ms,cm);return`<button class="pick ${x.id===p.id?"on":""}" data-act="pick" data-p="${esc(x.id)}"><span class="av" style="background:${colorFor(x.id,ps)}">${esc(initials(x.name))}</span>${esc(x.name)} <small>${st.pct} %</small></button>`}).join("");
+  const picker=ps.map(x=>{const st=personStats(x,ms,cm);return`<button class="pick ${x.id===p.id?"on":""}" data-act="pick" data-p="${esc(x.id)}"><span class="av" style="background:${colorFor(x.id,ps)}">${esc(initials(x.name))}</span>${esc(x.name)} <small>${isDone(st)?"🧳":st.pct+" %"}</small></button>`}).join("");
   const cards=ms.map(m=>{
     const t=tgt(p,m),d=cm[p.id+"|"+m.id]||0;
     const ents=state.entries.filter(e=>e.personId===p.id&&e.metricId===m.id).sort((a,b)=>(b.at||0)-(a.at||0));
@@ -399,7 +405,7 @@ function viewEntry(){
       <div class="addrow"><button class="big-pm" title="Odebrat poslední" data-act="minus" data-p="${esc(p.id)}" data-m="${esc(m.id)}" ${d?"":"disabled"}>−</button><input class="in" data-lbl-for="${esc(m.id)}" placeholder="Koho? (volitelné)"><button class="big-pm plus" title="Přidat 1 člověka" data-act="plusLbl" data-p="${esc(p.id)}" data-m="${esc(m.id)}">+</button></div>
       ${ents.length?`<div class="tags">${ents.slice(0,30).map(e=>`<span class="tag">${esc(e.label||"bez jména")} · ${ago(e.at||0)}<button title="Smazat" data-act="delEntry" data-id="${esc(e.id)}">×</button></span>`).join("")}</div>`:""}</div>`}).join("");
   return header("Zapisování")+`<div class="picker">${picker}</div>
-    <div class="ehead"><div class="av" style="background:${colorFor(p.id,ps)}">${esc(initials(p.name))}</div><div><h2>${esc(p.name)}</h2><span class="na">${s.pct} % splněno · ${s.raw} ${lidi(s.raw)} celkem</span></div></div>
+    <div class="ehead"><div class="av" style="background:${colorFor(p.id,ps)}">${esc(initials(p.name))}</div><div><h2>${esc(p.name)}</h2>${isDone(s)?DONE_BADGE+" ":""}<span class="na">${s.pct} % splněno · ${s.raw} ${lidi(s.raw)} celkem</span></div></div>
     <div class="egrid">${cards}</div>`;
 }
 
@@ -449,8 +455,11 @@ document.getElementById("toastUndo").onclick=()=>{if(undoFn)undoFn();undoFn=null
 /* ---------------- actions ---------------- */
 async function addEntry(pId,mId,label){
   const p=state.people.find(x=>x.id===pId),m=state.metrics.find(x=>x.id===mId);
+  let finishing=false;
+  if(p&&m){const ms=metrics(),cm=countMap(),before=personStats(p,ms,cm),c=cm[pId+"|"+mId]||0;
+    finishing=!isDone(before)&&before.target>0&&before.done+(c<tgt(p,m)?1:0)>=before.target}
   const id=await write(()=>store.add("entries",{personId:pId,metricId:mId,label:label||"",at:Date.now()}));
-  if(id)toast(`+1 ${p?p.name:""} – ${m?m.name:""}`,()=>write(()=>store.del("entries",id)));
+  if(id)toast(finishing?`🎉 ${p.name}: Mise splněna – bal kufry! 🧳🏝️`:`+1 ${p?p.name:""} – ${m?m.name:""}`,()=>write(()=>store.del("entries",id)));
 }
 async function removeLast(pId,mId){
   const e=state.entries.filter(x=>x.personId===pId&&x.metricId===mId).sort((a,b)=>(b.at||0)-(a.at||0))[0];
