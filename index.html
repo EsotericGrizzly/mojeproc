@@ -134,6 +134,30 @@ pre.tpl{background:var(--panel2);border:1px solid var(--line2);border-radius:8px
 .tag{font-size:12px;border:1px solid var(--line2);border-radius:99px;padding:4px 6px 4px 10px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
 .tag button{background:none;border:0;color:var(--dim);padding:0 2px;font-size:14px;line-height:1}
 .tag button:hover{color:var(--red)}
+/* zapis view */
+.picker{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
+.pick{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:99px;border:1px solid var(--line2);background:var(--panel);font-weight:500}
+.pick .av{width:30px;height:30px;font-size:12px}
+.pick small{color:var(--dim);font-weight:400}
+.pick.on{border-color:var(--lime);background:var(--lime-bg)}
+.ehead{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+.ehead .av{width:56px;height:56px;font-size:18px}
+.ehead h2{margin:0;font-size:24px}
+.egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.ecard{background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.01));border:1px solid var(--line);border-radius:20px;padding:20px}
+.ecard .t{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.ecard .t b{font-size:16px}
+.ecard .num{font-size:40px;font-weight:600;letter-spacing:-.02em}
+.ecard .num small{font-size:16px;color:var(--muted);font-weight:500}
+.ecard .pc{color:var(--lime);font-size:13px;margin-top:8px}
+.ecard .addrow{display:flex;gap:10px;margin-top:16px;align-items:center}
+.ecard .addrow .in{flex:1;padding:12px}
+.big-pm{width:52px;height:52px;border-radius:14px;font-size:26px;flex:none;border:1px solid var(--line2);background:var(--panel2);display:grid;place-items:center}
+.big-pm:hover{border-color:var(--lime);color:var(--lime)}
+.big-pm.plus{background:var(--lime);color:#0b0f08;border-color:var(--lime);font-weight:700}
+.big-pm.plus:hover{color:#0b0f08;filter:brightness(1.08)}
+.big-pm:disabled{opacity:.35;cursor:default}
+.ov-row{cursor:pointer}
 /* toast */
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#1b211e;border:1px solid var(--line2);padding:10px 14px;border-radius:12px;display:flex;gap:12px;align-items:center;opacity:0;pointer-events:none;transition:.25s;z-index:30}
 .toast.show{opacity:1;transform:translateX(-50%);pointer-events:auto}
@@ -148,6 +172,7 @@ pre.tpl{background:var(--panel2);border:1px solid var(--line2);border-radius:8px
   .main{padding:20px 16px}.hero{grid-template-columns:1fr}.big{font-size:40px}
   .right{grid-column:1;grid-template-columns:1fr;padding:20px 16px}
   .search{margin-left:0;width:100%}
+  .picker{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px}.pick{flex:none}
 }
 </style>
 </head>
@@ -157,12 +182,13 @@ pre.tpl{background:var(--panel2);border:1px solid var(--line2);border-radius:8px
     <div class="logo"><b>Team</b>Tracker<span>.</span></div>
     <div class="navh">Menu</div>
     <a class="nav" href="#prehled" data-view="prehled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Přehled</span></a>
+    <a class="nav" href="#zapis" data-view="zapis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg><span>Zapisování</span></a>
     <a class="nav" href="#historie" data-view="historie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg><span>Historie</span></a>
     <div class="navh">Ostatní</div>
     <a class="nav" href="#nastaveni" data-view="nastaveni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Nastavení &amp; Excel</span></a>
     <div class="promo">
-      <p>Každé <em>+1</em> se hned ukáže celému týmu</p>
-      <a class="btn pri" href="#nastaveni" style="display:inline-block;text-decoration:none">Import z Excelu →</a>
+      <p>Přivedl/a jsi někoho? Zapiš si <em>+1</em></p>
+      <a class="btn pri" href="#zapis" style="display:inline-block;text-decoration:none">Zapsat →</a>
     </div>
   </aside>
 
@@ -178,7 +204,9 @@ pre.tpl{background:var(--panel2);border:1px solid var(--line2);border-radius:8px
 /* ---------------- storage: shared db when available, otherwise local ---------------- */
 const COLS=["metrics","people","entries"];
 const state={metrics:[],people:[],entries:[],ready:{},mode:"loading",readOnly:false,stale:false};
-const ui={view:"prehled",filter:"all",q:""};
+const ui={view:"prehled",filter:"all",q:"",person:null};
+try{ui.person=localStorage.getItem("teamtracker.person")}catch(e){}
+function savePick(){try{localStorage.setItem("teamtracker.person",ui.person)}catch(e){}}
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 
@@ -257,19 +285,21 @@ function render(){
   const ready=COLS.every(c=>state.ready[c]);
   const main=document.getElementById("main"),right=document.getElementById("right");
   if(!ready){main.innerHTML=`<div class="loading">${state.stale?"Data se zatím nepodařilo načíst. Zkontroluj připojení.":"Načítám data…"}</div>`;right.innerHTML="";return}
-  const keepFocus=document.activeElement&&document.activeElement.id;
-  const caret=document.activeElement&&document.activeElement.selectionStart;
-  if(ui.view==="historie")main.innerHTML=viewHistory();
+  const ae=document.activeElement,keepFocus=ae&&ae.id,caret=ae&&ae.selectionStart;
+  const drafts={};document.querySelectorAll("[data-lbl-for]").forEach(i=>{if(i.value)drafts[i.dataset.lblFor]=i.value});
+  const lblFocus=ae&&ae.dataset&&ae.dataset.lblFor;
+  if(ui.view==="zapis")main.innerHTML=viewEntry();
+  else if(ui.view==="historie")main.innerHTML=viewHistory();
   else if(ui.view==="nastaveni")main.innerHTML=viewSettings();
   else main.innerHTML=viewDashboard();
   right.innerHTML=viewRight();
   if(keepFocus==="q"){const q=document.getElementById("q");if(q){q.focus();try{q.setSelectionRange(caret,caret)}catch(e){}}}
-  if(openPerson)renderPersonModal();
+  document.querySelectorAll("[data-lbl-for]").forEach(i=>{const v=drafts[i.dataset.lblFor];if(v)i.value=v;if(i.dataset.lblFor===lblFocus){i.focus();try{i.setSelectionRange(caret,caret)}catch(e){}}});
 }
 
-function header(title){
+function header(title,extra){
   const badge=state.mode==="shared"?`<span class="badge"><i></i>Sdílené živě</span>`:`<span class="badge local"><i></i>Lokální režim (jen tento prohlížeč)</span>`;
-  return`<div class="top"><h1>${title}</h1>${badge}</div>`+
+  return`<div class="top"><h1>${title}</h1><div style="display:flex;gap:10px;align-items:center">${badge}${extra||""}</div></div>`+
     (state.stale?`<div class="note">Data nemusí být aktuální – čekám na spojení se serverem.</div>`:"")+
     (state.readOnly?`<div class="note">Máš jen čtecí přístup. Pro přidávání požádej vlastníka o úroveň Contributor.</div>`:"");
 }
@@ -300,11 +330,11 @@ function viewDashboard(){
       const t=tgt(p,m),d=cm[p.id+"|"+m.id]||0;
       if(!t&&!d)return`<td class="goal"><span class="na">— bez cíle</span></td>`;
       return`<td class="goal"><div class="gt"><b>${d}${t?` <span>/ ${t}</span>`:""}</b><span>${t?pct(d,t)+" %":""}</span></div>
-        <div class="ctl"><button class="pm" title="Odebrat poslední" data-act="minus" data-p="${esc(p.id)}" data-m="${esc(m.id)}" ${d?"":"disabled"}>−</button>${bar(t?pct(d,t):100)}<button class="pm plus" title="Přidat 1 člověka" data-act="plus" data-p="${esc(p.id)}" data-m="${esc(m.id)}">+</button></div></td>`}).join("");
-    return`<tr><td><div class="who" data-act="person" data-p="${esc(p.id)}"><div class="av" style="background:${col}">${esc(initials(p.name))}</div><div><b>${esc(p.name)}</b><span>${s.raw} ${lidi(s.raw)} celkem</span></div></div></td>${goals}
+        ${bar(t?pct(d,t):100)}</td>`}).join("");
+    return`<tr class="ov-row" data-act="goPerson" data-p="${esc(p.id)}" title="Otevřít v Zapisování"><td><div class="who"><div class="av" style="background:${col}">${esc(initials(p.name))}</div><div><b>${esc(p.name)}</b><span>${s.raw} ${lidi(s.raw)} celkem</span></div></div></td>${goals}
       <td class="tot">${s.pct} %<small>${s.done} / ${s.target}</small></td></tr>`}).join("")||`<tr><td colspan="${visMs.length+2}" class="empty">Nikdo neodpovídá hledání.</td></tr>`;
 
-  return header("Ahoj týme, jak to jde? 👋")+`
+  return header("Ahoj týme, jak to jde? 👋",`<a class="btn pri" href="#zapis" style="text-decoration:none">+ Zapsat</a>`)+`
   <div class="hero">
     <div><div class="big">${total}<small>${lidi(total)} přivedeno</small></div><div class="sub">+${week} za posledních 7 dní</div></div>
     <div class="teambar"><div class="row"><span>Splnění týmových cílů</span><b>${teamPct} %</b></div>${bar(teamPct,"lg")}<div class="row" style="margin:10px 0 0;font-size:12px"><span>${tD} z ${tT} započítaných</span><span>${ps.length} lidí · ${ms.length} úkoly</span></div></div>
@@ -318,11 +348,30 @@ function viewRight(){
   const ms=metrics(),ps=people(),cm=countMap();
   const pmap=Object.fromEntries(ps.map(p=>[p.id,p])),mmap=Object.fromEntries(ms.map(m=>[m.id,m]));
   const ranked=ps.map(p=>({p,s:personStats(p,ms,cm)})).sort((a,b)=>b.s.pct-a.s.pct||b.s.raw-a.s.raw);
-  const lb=ranked.map((r,i)=>`<div class="li" data-act="person" data-p="${esc(r.p.id)}" style="cursor:pointer"><div class="rank">${i+1}</div><div class="av" style="background:${colorFor(r.p.id,ps)}">${esc(initials(r.p.name))}</div><div class="mid"><b>${esc(r.p.name)}</b>${bar(r.s.pct)}</div><div class="r">${r.s.pct} %<small>${r.s.done}/${r.s.target}</small></div></div>`).join("")||`<div class="empty">Zatím nikdo</div>`;
+  const lb=ranked.map((r,i)=>`<div class="li" data-act="goPerson" data-p="${esc(r.p.id)}" style="cursor:pointer"><div class="rank">${i+1}</div><div class="av" style="background:${colorFor(r.p.id,ps)}">${esc(initials(r.p.name))}</div><div class="mid"><b>${esc(r.p.name)}</b>${bar(r.s.pct)}</div><div class="r">${r.s.pct} %<small>${r.s.done}/${r.s.target}</small></div></div>`).join("")||`<div class="empty">Zatím nikdo</div>`;
   const recent=[...state.entries].sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,8).map(e=>{
     const p=pmap[e.personId],m=mmap[e.metricId];
     return`<div class="li"><div class="av" style="background:${colorFor(e.personId,ps)}">${esc(initials(p?p.name:"?"))}</div><div class="mid"><b>${esc(p?p.name:"Smazaný člověk")}</b><span>${esc(m?m.name:"?")}${e.label?" · "+esc(e.label):""}</span></div><div class="r" style="color:var(--lime)">+1<small style="color:var(--dim)">${ago(e.at||0)}</small></div></div>`}).join("")||`<div class="empty">Zatím žádná aktivita</div>`;
   return`<section><h2>Žebříček <span>% splnění</span></h2>${lb}</section><section><h2>Poslední aktivita <a href="#historie" style="font-size:12px;color:var(--lime);text-decoration:none">Vše →</a></h2>${recent}</section>`;
+}
+
+function viewEntry(){
+  const ms=metrics(),ps=people(),cm=countMap();
+  if(!ms.length||!ps.length)return header("Zapisování")+`<div class="sec"><h3>Nejdřív přidej lidi a úkoly</h3><a class="btn pri" href="#nastaveni" style="text-decoration:none">Otevřít nastavení</a></div>`;
+  if(!ps.some(p=>p.id===ui.person))ui.person=ps[0].id;
+  const p=ps.find(x=>x.id===ui.person),s=personStats(p,ms,cm);
+  const picker=ps.map(x=>{const st=personStats(x,ms,cm);return`<button class="pick ${x.id===p.id?"on":""}" data-act="pick" data-p="${esc(x.id)}"><span class="av" style="background:${colorFor(x.id,ps)}">${esc(initials(x.name))}</span>${esc(x.name)} <small>${st.pct} %</small></button>`}).join("");
+  const cards=ms.map(m=>{
+    const t=tgt(p,m),d=cm[p.id+"|"+m.id]||0;
+    const ents=state.entries.filter(e=>e.personId===p.id&&e.metricId===m.id).sort((a,b)=>(b.at||0)-(a.at||0));
+    const pc=t?pct(d,t):(d?100:0);
+    return`<div class="ecard"><div class="t"><b>${esc(m.name)}</b><span class="na">${t?"cíl "+t:"bez cíle"}</span></div>
+      <div class="num">${d}<small> / ${t||"–"}</small></div>${bar(pc,"lg")}<div class="pc">${t?(d>=t?"Splněno 🎉":pc+" % · zbývá "+(t-d)):" "}</div>
+      <div class="addrow"><button class="big-pm" title="Odebrat poslední" data-act="minus" data-p="${esc(p.id)}" data-m="${esc(m.id)}" ${d?"":"disabled"}>−</button><input class="in" data-lbl-for="${esc(m.id)}" placeholder="Koho? (volitelné)"><button class="big-pm plus" title="Přidat 1 člověka" data-act="plusLbl" data-p="${esc(p.id)}" data-m="${esc(m.id)}">+</button></div>
+      ${ents.length?`<div class="tags">${ents.slice(0,30).map(e=>`<span class="tag">${esc(e.label||"bez jména")} · ${ago(e.at||0)}<button title="Smazat" data-act="delEntry" data-id="${esc(e.id)}">×</button></span>`).join("")}</div>`:""}</div>`}).join("");
+  return header("Zapisování")+`<div class="picker">${picker}</div>
+    <div class="ehead"><div class="av" style="background:${colorFor(p.id,ps)}">${esc(initials(p.name))}</div><div><h2>${esc(p.name)}</h2><span class="na">${s.pct} % splněno · ${s.raw} ${lidi(s.raw)} celkem</span></div></div>
+    <div class="egrid">${cards}</div>`;
 }
 
 function viewHistory(){
@@ -355,24 +404,7 @@ Petra Malá   | 8               | 6</pre>
     <div class="row-actions"><button class="btn" data-act="copyStats">Kopírovat přehled</button><button class="btn" data-act="copyEntries">Kopírovat všechny záznamy</button></div></div>`;
 }
 
-/* ---------------- person modal ---------------- */
-let openPerson=null;
-function renderPersonModal(){
-  const p=state.people.find(x=>x.id===openPerson);
-  if(!p){closeModal();return}
-  const ms=metrics(),ps=people(),cm=countMap(),s=personStats(p,ms,cm);
-  const ae=document.activeElement,keep=ae&&ae.dataset&&ae.dataset.lblFor,val=keep?ae.value:"";
-  const goals=ms.map(m=>{
-    const t=tgt(p,m),d=cm[p.id+"|"+m.id]||0;
-    const ents=state.entries.filter(e=>e.personId===p.id&&e.metricId===m.id).sort((a,b)=>(b.at||0)-(a.at||0));
-    return`<div class="mg"><div class="t"><b>${esc(m.name)}</b><span>${d} <small>/ ${t||"bez cíle"}</small></span></div>${bar(t?pct(d,t):(d?100:0),"lg")}
-      <div class="addrow"><input class="in" data-lbl-for="${esc(m.id)}" placeholder="Koho jsi přivedl/a? (volitelné)"><button class="btn pri" data-act="plusLbl" data-p="${esc(p.id)}" data-m="${esc(m.id)}">+ Přidat</button></div>
-      ${ents.length?`<div class="tags">${ents.map(e=>`<span class="tag">${esc(e.label||"bez jména")} · ${ago(e.at||0)}<button title="Smazat" data-act="delEntry" data-id="${esc(e.id)}">×</button></span>`).join("")}</div>`:""}</div>`}).join("");
-  document.getElementById("modal").innerHTML=`<div class="mh"><div class="av" style="background:${colorFor(p.id,ps)};width:48px;height:48px;font-size:16px">${esc(initials(p.name))}</div><div><h2>${esc(p.name)}</h2><span class="na">${s.pct} % splněno · ${s.raw} ${lidi(s.raw)} celkem</span></div><button class="x" data-act="close">×</button></div>${goals}`;
-  if(keep){const el=document.querySelector(`[data-lbl-for="${CSS.escape(keep)}"]`);if(el){el.value=val;el.focus()}}
-  document.getElementById("ov").classList.add("show");
-}
-function closeModal(){openPerson=null;document.getElementById("ov").classList.remove("show")}
+function closeModal(){document.getElementById("ov").classList.remove("show")}
 
 /* ---------------- toast ---------------- */
 let toastTimer,undoFn=null;
@@ -411,7 +443,8 @@ document.addEventListener("click",async ev=>{
   const a=el.dataset.act;
   if(a==="plus")addEntry(el.dataset.p,el.dataset.m);
   else if(a==="minus")removeLast(el.dataset.p,el.dataset.m);
-  else if(a==="person"){openPerson=el.dataset.p;renderPersonModal()}
+  else if(a==="goPerson"){ui.person=el.dataset.p;savePick();location.hash="zapis"}
+  else if(a==="pick"){ui.person=el.dataset.p;savePick();render()}
   else if(a==="close")closeModal();
   else if(a==="plusLbl"){const inp=el.parentElement.querySelector("input");const v=inp.value.trim().slice(0,80);inp.value="";addEntry(el.dataset.p,el.dataset.m,v)}
   else if(a==="filter"){ui.filter=el.dataset.id;render()}
@@ -431,7 +464,7 @@ document.addEventListener("click",async ev=>{
 document.getElementById("ov").addEventListener("click",e=>{if(e.target.id==="ov")closeModal()});
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape")closeModal();
-  if(e.key==="Enter"&&e.target.dataset&&e.target.dataset.lblFor){e.target.parentElement.querySelector("button").click()}
+  if(e.key==="Enter"&&e.target.dataset&&e.target.dataset.lblFor){e.target.parentElement.querySelector('[data-act="plusLbl"]').click()}
   if(e.key==="Enter"&&(e.target.id==="newMetric"||e.target.id==="newPerson")){e.target.nextElementSibling.click()}
 });
 document.addEventListener("input",e=>{if(e.target.id==="q"){ui.q=e.target.value;render()}});
@@ -482,7 +515,7 @@ async function importFile(file){
 }
 
 /* ---------------- routing ---------------- */
-function route(){const h=location.hash.slice(1);ui.view=["prehled","historie","nastaveni"].includes(h)?h:"prehled";ui.filter="all";render()}
+function route(){window.scrollTo(0,0);const h=location.hash.slice(1);ui.view=["prehled","zapis","historie","nastaveni"].includes(h)?h:"prehled";ui.filter="all";render()}
 window.addEventListener("hashchange",route);
 setInterval(()=>{if(ui.view==="prehled"&&!document.activeElement.matches("input"))render()},60000); // refresh "x min" labels
 route();
