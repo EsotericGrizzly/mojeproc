@@ -134,6 +134,25 @@ pre.tpl{background:var(--panel2);border:1px solid var(--line2);border-radius:8px
 .tag{font-size:12px;border:1px solid var(--line2);border-radius:99px;padding:4px 6px 4px 10px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
 .tag button{background:none;border:0;color:var(--dim);padding:0 2px;font-size:14px;line-height:1}
 .tag button:hover{color:var(--red)}
+/* quest hero */
+.quest{position:relative;overflow:hidden;border-radius:24px;padding:28px 28px 22px;margin-bottom:24px;border:1px solid rgba(184,242,106,.25);
+  background:radial-gradient(600px 260px at 100% 0%,rgba(80,210,200,.28),transparent 70%),radial-gradient(500px 240px at 0% 100%,rgba(184,242,106,.18),transparent 70%),linear-gradient(135deg,#0f1a17,#0b1110)}
+.quest .qtop{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
+.kicker{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);margin-bottom:6px}
+.quest h1{margin:0;font-size:34px;letter-spacing:-.02em;line-height:1.1}
+.quest p{margin:10px 0 0;color:var(--muted);max-width:560px;line-height:1.5}
+.quest p b{color:var(--text)}
+.journey{display:flex;align-items:center;gap:14px;margin:30px 0 22px}
+.track{flex:1;height:10px;border-radius:99px;background:repeating-linear-gradient(90deg,#2a3330 0 10px,transparent 10px 18px);position:relative}
+.track>i{position:absolute;inset:0 auto 0 0;border-radius:99px;background:linear-gradient(90deg,var(--lime-d),var(--lime));box-shadow:0 0 18px rgba(184,242,106,.5);transition:width .6s}
+.plane{position:absolute;top:50%;transform:translate(-50%,-55%);font-size:26px;transition:left .6s;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+.isle{font-size:38px;line-height:1}
+.qstats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.qstats>div{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.qstats b{display:block;font-size:24px;font-weight:600}
+.qstats span{color:var(--muted);font-size:12px}
+.h2{font-size:18px;font-weight:600;margin:0 0 12px}
+@media (max-width:820px){.quest{padding:20px}.quest h1{font-size:26px}.quest .qtop{flex-direction:column}.qstats{grid-template-columns:1fr 1fr}}
 /* zapis view */
 .picker{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
 .pick{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:99px;border:1px solid var(--line2);background:var(--panel);font-weight:500}
@@ -183,7 +202,7 @@ pre.tpl{background:var(--panel2);border:1px solid var(--line2);border-radius:8px
     <div class="navh">Menu</div>
     <a class="nav" href="#prehled" data-view="prehled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Přehled</span></a>
     <a class="nav" href="#zapis" data-view="zapis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg><span>Zapisování</span></a>
-    <a class="nav" href="#historie" data-view="historie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg><span>Historie</span></a>
+    <a class="nav" href="#historie" data-view="historie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 2.5h6v3H9z"/><path d="M9 11h6M9 15h4"/></svg><span>Historie</span></a>
     <div class="navh">Ostatní</div>
     <a class="nav" href="#nastaveni" data-view="nastaveni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Nastavení &amp; Excel</span></a>
     <div class="promo">
@@ -298,8 +317,7 @@ function render(){
 }
 
 function header(title,extra){
-  const badge=state.mode==="shared"?`<span class="badge"><i></i>Sdílené živě</span>`:`<span class="badge local"><i></i>Lokální režim (jen tento prohlížeč)</span>`;
-  return`<div class="top"><h1>${title}</h1><div style="display:flex;gap:10px;align-items:center">${badge}${extra||""}</div></div>`+
+  return`<div class="top"><h1>${title}</h1><div style="display:flex;gap:10px;align-items:center">${extra||""}</div></div>`+
     (state.stale?`<div class="note">Data nemusí být aktuální – čekám na spojení se serverem.</div>`:"")+
     (state.readOnly?`<div class="note">Máš jen čtecí přístup. Pro přidávání požádej vlastníka o úroveň Contributor.</div>`:"");
 }
@@ -311,18 +329,13 @@ function viewDashboard(){
   ps.forEach(p=>{const s=personStats(p,ms,cm);tD+=s.done;tT+=s.target});
   const teamPct=pct(tD,tT);
   const week=state.entries.filter(e=>Date.now()-(e.at||0)<7*864e5).length;
-  const visMs=ui.filter==="all"?ms:ms.filter(m=>m.id===ui.filter);
-  const q=ui.q.trim().toLowerCase();
-  const rows=ps.filter(p=>!q||String(p.name).toLowerCase().includes(q));
+  const visMs=ms,rows=ps;
 
   const cards=ms.map((m,i)=>{
     let d=0,t=0;ps.forEach(p=>{const tt=tgt(p,m);d+=cm[p.id+"|"+m.id]||0;t+=tt});
     const p=pct(d,t);
     return`<div class="card"><div class="ic" style="background:${PALETTE[i%PALETTE.length]}">${esc(((String(m.name).trim().split(/\s+/).pop())||"?")[0].toUpperCase())}</div>
       <div class="lbl">${esc(m.name)}</div><div class="val">${d} <small>/ ${t}</small></div>${bar(p)}<div class="pct">${p} % týmového cíle</div></div>`}).join("");
-
-  const chips=`<button class="chip ${ui.filter==="all"?"on":""}" data-act="filter" data-id="all">Všechny úkoly</button>`+
-    ms.map(m=>`<button class="chip ${ui.filter===m.id?"on":""}" data-act="filter" data-id="${esc(m.id)}">${esc(m.name)}</button>`).join("");
 
   const body=rows.map(p=>{
     const s=personStats(p,ms,cm),col=colorFor(p.id,ps);
@@ -332,27 +345,33 @@ function viewDashboard(){
       return`<td class="goal"><div class="gt"><b>${d}${t?` <span>/ ${t}</span>`:""}</b><span>${t?pct(d,t)+" %":""}</span></div>
         ${bar(t?pct(d,t):100)}</td>`}).join("");
     return`<tr class="ov-row" data-act="goPerson" data-p="${esc(p.id)}" title="Otevřít v Zapisování"><td><div class="who"><div class="av" style="background:${col}">${esc(initials(p.name))}</div><div><b>${esc(p.name)}</b><span>${s.raw} ${lidi(s.raw)} celkem</span></div></div></td>${goals}
-      <td class="tot">${s.pct} %<small>${s.done} / ${s.target}</small></td></tr>`}).join("")||`<tr><td colspan="${visMs.length+2}" class="empty">Nikdo neodpovídá hledání.</td></tr>`;
+      <td class="tot">${s.pct} %<small>${s.done} / ${s.target}</small></td></tr>`}).join("")||`<tr><td colspan="${visMs.length+2}" class="empty">Zatím nikdo</td></tr>`;
 
-  return header("Ahoj týme, jak to jde? 👋",`<a class="btn pri" href="#zapis" style="text-decoration:none">+ Zapsat</a>`)+`
-  <div class="hero">
-    <div><div class="big">${total}<small>${lidi(total)} přivedeno</small></div><div class="sub">+${week} za posledních 7 dní</div></div>
-    <div class="teambar"><div class="row"><span>Splnění týmových cílů</span><b>${teamPct} %</b></div>${bar(teamPct,"lg")}<div class="row" style="margin:10px 0 0;font-size:12px"><span>${tD} z ${tT} započítaných</span><span>${ps.length} lidí · ${ms.length} úkoly</span></div></div>
-  </div>
+  const left=Math.max(0,tT-tD);
+  return`<section class="quest">
+    <div class="qtop"><div><div class="kicker">Naše výzva</div><h1>Mise: Tropický ostrov 🌴</h1>
+      <p>Když společně splníme všechny cíle, <b>letíme na ostrov</b>. Každý přivedený člověk nás posune blíž k pláži.</p></div>
+      <a class="btn pri" href="#zapis" style="text-decoration:none;white-space:nowrap">+ Zapsat</a></div>
+    <div class="journey"><div class="track"><i style="width:${teamPct}%"></i><span class="plane" style="left:${teamPct}%">✈️</span></div><span class="isle">🏝️</span></div>
+    <div class="qstats">
+      <div><b>${teamPct} %</b><span>cesty za námi</span></div>
+      <div><b>${left}</b><span>${left?"lidí zbývá do odletu":"MISE SPLNĚNA – balte kufry!"}</span></div>
+      <div><b>${total}</b><span>přivedeno celkem</span></div>
+      <div><b>+${week}</b><span>za posledních 7 dní</span></div>
+    </div>
+  </section>`+(state.stale||state.readOnly?header(""):"")+`
   <div class="cards">${cards}</div>
-  <div class="toolbar">${chips}<label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="q" placeholder="Hledat člověka" value="${esc(ui.q)}"></label></div>
+  <h2 class="h2">Posádka</h2>
   <div class="tbl"><table><thead><tr><th>Člověk</th>${visMs.map(m=>`<th>${esc(m.name)}</th>`).join("")}<th>Celkem</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 function viewRight(){
   const ms=metrics(),ps=people(),cm=countMap();
   const pmap=Object.fromEntries(ps.map(p=>[p.id,p])),mmap=Object.fromEntries(ms.map(m=>[m.id,m]));
-  const ranked=ps.map(p=>({p,s:personStats(p,ms,cm)})).sort((a,b)=>b.s.pct-a.s.pct||b.s.raw-a.s.raw);
-  const lb=ranked.map((r,i)=>`<div class="li" data-act="goPerson" data-p="${esc(r.p.id)}" style="cursor:pointer"><div class="rank">${i+1}</div><div class="av" style="background:${colorFor(r.p.id,ps)}">${esc(initials(r.p.name))}</div><div class="mid"><b>${esc(r.p.name)}</b>${bar(r.s.pct)}</div><div class="r">${r.s.pct} %<small>${r.s.done}/${r.s.target}</small></div></div>`).join("")||`<div class="empty">Zatím nikdo</div>`;
   const recent=[...state.entries].sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,8).map(e=>{
     const p=pmap[e.personId],m=mmap[e.metricId];
     return`<div class="li"><div class="av" style="background:${colorFor(e.personId,ps)}">${esc(initials(p?p.name:"?"))}</div><div class="mid"><b>${esc(p?p.name:"Smazaný člověk")}</b><span>${esc(m?m.name:"?")}${e.label?" · "+esc(e.label):""}</span></div><div class="r" style="color:var(--lime)">+1<small style="color:var(--dim)">${ago(e.at||0)}</small></div></div>`}).join("")||`<div class="empty">Zatím žádná aktivita</div>`;
-  return`<section><h2>Žebříček <span>% splnění</span></h2>${lb}</section><section><h2>Poslední aktivita <a href="#historie" style="font-size:12px;color:var(--lime);text-decoration:none">Vše →</a></h2>${recent}</section>`;
+  return`<section><h2>Poslední aktivita <a href="#historie" style="font-size:12px;color:var(--lime);text-decoration:none">Vše →</a></h2>${recent}</section>`;
 }
 
 function viewEntry(){
