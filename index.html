@@ -158,6 +158,10 @@ pre.tpl{background:var(--panel2);border:1px solid var(--line2);border-radius:8px
 .done-badge{display:inline-block;margin-top:4px;font-size:12px;font-weight:600;color:#0b0f08;background:linear-gradient(90deg,#ffd76a,var(--lime));border-radius:99px;padding:3px 10px;white-space:nowrap;box-shadow:0 0 14px rgba(184,242,106,.35)}
 .ehead .done-badge{font-size:13px;margin:6px 0 4px}
 tr.row-done td{background:rgba(184,242,106,.06)}
+.lock{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line2);border-radius:14px;padding:14px 16px;margin-bottom:16px}
+.lock .lt{flex:1 1 260px;display:flex;flex-direction:column;gap:2px}
+.lock.ok{justify-content:space-between;border-color:rgba(184,242,106,.35);background:var(--lime-bg);padding:10px 14px}
+.lock .in{width:180px}
 /* zapis view */
 .picker{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
 .pick{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:99px;border:1px solid var(--line2);background:var(--panel);font-weight:500}
@@ -224,10 +228,19 @@ tr.row-done td{background:rgba(184,242,106,.06)}
 <div class="ov" id="ov"><div class="modal" id="modal"></div></div>
 <div class="toast" id="toast"><span id="toastMsg"></span><button id="toastUndo">Zpět</button></div>
 
+<script src="firebase-config.js"></script>
 <script>
 /* ---------------- storage: shared db when available, otherwise local ---------------- */
 const COLS=["metrics","people","entries"];
-const state={metrics:[],people:[],entries:[],ready:{},mode:"loading",readOnly:false,stale:false};
+const state={metrics:[],people:[],entries:[],ready:{},mode:"loading",readOnly:false,stale:false,user:null};
+const CFG=window.TRACKER_CONFIG||{};
+const DOMAIN=String(CFG.loginDomain||"ostrov.tym").toLowerCase();
+let fb=null; // firebase auth helpers when running on Firebase
+const authOn=()=>state.mode==="firebase";
+const loginOf=p=>String((p&&p.login)||((p&&p.id)+"@"+DOMAIN)).trim().toLowerCase();
+const isAdmin=()=>authOn()&&!!state.user&&state.user===String(CFG.adminEmail||"").trim().toLowerCase();
+const canAdmin=()=>!authOn()||isAdmin();
+const canWritePerson=p=>!authOn()||isAdmin()||(!!state.user&&!!p&&state.user===loginOf(p));
 const ui={view:"prehled",filter:"all",q:"",person:null,lastPct:0,flown:false};
 try{ui.person=localStorage.getItem("teamtracker.person")}catch(e){}
 function savePick(){try{localStorage.setItem("teamtracker.person",ui.person)}catch(e){}}
@@ -268,12 +281,31 @@ function remoteStore(db){
   };
 }
 
+async function firebaseStore(cfg){
+  const B="https://www.gstatic.com/firebasejs/10.14.1/";
+  const [{initializeApp},F,A]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-firestore.js"),import(B+"firebase-auth.js")]);
+  const app=initializeApp(cfg),db=F.getFirestore(app),auth=A.getAuth(app);
+  A.onAuthStateChanged(auth,u=>{state.user=u?String(u.email||"").toLowerCase():null;render()});
+  fb={signIn:(e,pw)=>A.signInWithEmailAndPassword(auth,e,pw),signOut:()=>A.signOut(auth)};
+  return{
+    sub(c,cb){
+      const timer=setTimeout(()=>{state.stale=true;render()},10000);
+      F.onSnapshot(F.collection(db,c),s=>{clearTimeout(timer);state.stale=false;cb(s.docs.map(d=>({id:d.id,...d.data()})))},
+        err=>{clearTimeout(timer);state.stale=true;console.warn(c,err);render()});
+    },
+    async set(c,id,v){await F.setDoc(F.doc(db,c,id),v)},
+    async add(c,v){const id=uid();await F.setDoc(F.doc(db,c,id),v);return id},
+    async del(c,id){await F.deleteDoc(F.doc(db,c,id))}
+  };
+}
+
 let store;
 async function write(fn){
   if(state.readOnly){toast("Máš jen čtecí přístup.");return}
   try{return await fn()}
   catch(e){
-    if(e&&e.code==="invalid_argument"){state.readOnly=true;render();toast("Nemáš oprávnění zapisovat – požádej vlastníka o přístup Contributor.")}
+    if(e&&e.code==="permission-denied"){toast("Nemáš oprávnění – nejdřív se odemkni svým heslem.")}
+    else if(e&&e.code==="invalid_argument"){state.readOnly=true;render();toast("Nemáš oprávnění zapisovat – požádej vlastníka o přístup Contributor.")}
     else if(e&&e.code==="quota_exceeded"){toast("Databáze je plná – smaž staré záznamy v Historii.")}
     else{toast("Uložení se nepovedlo, zkus to znovu.");console.warn(e)}
   }
@@ -282,8 +314,11 @@ async function write(fn){
 async function init(){
   let db=null;
   try{if(window.claude&&typeof claude.use==="function")db=await claude.use("db")}catch(e){}
-  store=db?remoteStore(db):localStore();
-  state.mode=db?"shared":"local";
+  if(db){store=remoteStore(db);state.mode="shared"}
+  else if(CFG.firebase){
+    try{store=await firebaseStore(CFG.firebase);state.mode="firebase"}
+    catch(e){console.warn(e);store=localStore();state.mode="local";state.fbError=true}
+  }else{store=localStore();state.mode="local"}
   COLS.forEach(c=>store.sub(c,list=>{state[c]=list;state.ready[c]=true;render()}));
 }
 
@@ -314,6 +349,7 @@ function render(){
   const ae=document.activeElement,keepFocus=ae&&ae.id,caret=ae&&ae.selectionStart;
   const drafts={};document.querySelectorAll("[data-lbl-for]").forEach(i=>{if(i.value)drafts[i.dataset.lblFor]=i.value});
   const lblFocus=ae&&ae.dataset&&ae.dataset.lblFor;
+  const keepIds={};["pw","adminEmail","adminPw","pwMsg","adminMsg"].forEach(i=>{const el=document.getElementById(i);if(el)keepIds[i]=el.tagName==="SPAN"?el.textContent:el.value});
   if(ui.view==="zapis")main.innerHTML=viewEntry();
   else if(ui.view==="historie")main.innerHTML=viewHistory();
   else if(ui.view==="nastaveni")main.innerHTML=viewSettings();
@@ -327,12 +363,14 @@ function render(){
     els[0].style.width=t+"%";els[1].style.left=t+"%";ui.lastPct=t;ui.flown=true;
   }
   if(keepFocus==="q"){const q=document.getElementById("q");if(q){q.focus();try{q.setSelectionRange(caret,caret)}catch(e){}}}
+  Object.entries(keepIds).forEach(([i,v])=>{const el=document.getElementById(i);if(!el||!v)return;if(el.tagName==="SPAN")el.textContent=v;else el.value=v;if(i===keepFocus)el.focus()});
   document.querySelectorAll("[data-lbl-for]").forEach(i=>{const v=drafts[i.dataset.lblFor];if(v)i.value=v;if(i.dataset.lblFor===lblFocus){i.focus();try{i.setSelectionRange(caret,caret)}catch(e){}}});
 }
 
 function header(title,extra){
   return`<div class="top"><h1>${title}</h1><div style="display:flex;gap:10px;align-items:center">${extra||""}</div></div>`+
     (state.stale?`<div class="note">Data nemusí být aktuální – čekám na spojení se serverem.</div>`:"")+
+    (state.fbError?`<div class="note">Nepodařilo se připojit k Firebase – zkontroluj firebase-config.js. Teď běží jen lokální režim.</div>`:"")+
     (state.readOnly?`<div class="note">Máš jen čtecí přístup. Pro přidávání požádej vlastníka o úroveň Contributor.</div>`:"");
 }
 
@@ -393,7 +431,11 @@ function viewEntry(){
   const ms=metrics(),ps=people(),cm=countMap();
   if(!ms.length||!ps.length)return header("Zapisování")+`<div class="sec"><h3>Nejdřív přidej lidi a úkoly</h3><a class="btn pri" href="#nastaveni" style="text-decoration:none">Otevřít nastavení</a></div>`;
   if(!ps.some(p=>p.id===ui.person))ui.person=ps[0].id;
-  const p=ps.find(x=>x.id===ui.person),s=personStats(p,ms,cm);
+  const p=ps.find(x=>x.id===ui.person),s=personStats(p,ms,cm),can=canWritePerson(p),dis=can?"":"disabled";
+  const lock=!authOn()?"":can
+    ?`<div class="lock ok"><span>🔓 Odemčeno${isAdmin()?" (správce)":""}</span><button class="btn sm" data-act="lock">Zamknout</button></div>`
+    :`<form class="lock" data-unlock="${esc(p.id)}"><div class="lt"><b>🔒 Zápis za ${esc(p.name)} je zamčený</b><span class="na">Zadej své heslo (dá ti ho vedoucí). Odemčení si prohlížeč zapamatuje.</span></div>
+       <input class="in" type="password" id="pw" autocomplete="current-password" placeholder="Heslo"><button class="btn pri">Odemknout</button><span id="pwMsg" class="na"></span></form>`;
   const picker=ps.map(x=>{const st=personStats(x,ms,cm);return`<button class="pick ${x.id===p.id?"on":""}" data-act="pick" data-p="${esc(x.id)}"><span class="av" style="background:${colorFor(x.id,ps)}">${esc(initials(x.name))}</span>${esc(x.name)} <small>${isDone(st)?"🧳":st.pct+" %"}</small></button>`}).join("");
   const cards=ms.map(m=>{
     const t=tgt(p,m),d=cm[p.id+"|"+m.id]||0;
@@ -401,11 +443,11 @@ function viewEntry(){
     const pc=t?pct(d,t):(d?100:0);
     return`<div class="ecard"><div class="t"><b>${esc(m.name)}</b><span class="na">${t?"cíl "+t:"bez cíle"}</span></div>
       <div class="num">${d}<small> / ${t||"–"}</small></div>${bar(pc,"lg")}<div class="pc">${t?(d>=t?"Splněno 🎉":pc+" % · zbývá "+(t-d)):" "}</div>
-      <div class="addrow"><button class="big-pm" title="Odebrat poslední" data-act="minus" data-p="${esc(p.id)}" data-m="${esc(m.id)}" ${d?"":"disabled"}>−</button><input class="in" data-lbl-for="${esc(m.id)}" placeholder="Koho? (volitelné)"><button class="big-pm plus" title="Přidat 1 člověka" data-act="plusLbl" data-p="${esc(p.id)}" data-m="${esc(m.id)}">+</button></div>
-      ${ents.length?`<div class="tags">${ents.slice(0,30).map(e=>`<span class="tag">${esc(e.label||"bez jména")} · ${ago(e.at||0)}<button title="Smazat" data-act="delEntry" data-id="${esc(e.id)}">×</button></span>`).join("")}</div>`:""}</div>`}).join("");
+      <div class="addrow"><button class="big-pm" title="Odebrat poslední" data-act="minus" data-p="${esc(p.id)}" data-m="${esc(m.id)}" ${d&&can?"":"disabled"}>−</button><input class="in" data-lbl-for="${esc(m.id)}" placeholder="Koho? (volitelné)" ${dis}><button class="big-pm plus" title="Přidat 1 člověka" data-act="plusLbl" data-p="${esc(p.id)}" data-m="${esc(m.id)}" ${dis}>+</button></div>
+      ${ents.length?`<div class="tags">${ents.slice(0,30).map(e=>`<span class="tag">${esc(e.label||"bez jména")} · ${ago(e.at||0)}${can?`<button title="Smazat" data-act="delEntry" data-id="${esc(e.id)}">×</button>`:""}</span>`).join("")}</div>`:""}</div>`}).join("");
   return header("Zapisování")+`<div class="picker">${picker}</div>
     <div class="ehead"><div class="av" style="background:${colorFor(p.id,ps)}">${esc(initials(p.name))}</div><div><h2>${esc(p.name)}</h2>${isDone(s)?DONE_BADGE+" ":""}<span class="na">${s.pct} % splněno · ${s.raw} ${lidi(s.raw)} celkem</span></div></div>
-    <div class="egrid">${cards}</div>`;
+    ${lock}<div class="egrid">${cards}</div>`;
 }
 
 function viewHistory(){
@@ -413,21 +455,24 @@ function viewHistory(){
   const pmap=Object.fromEntries(ps.map(p=>[p.id,p])),mmap=Object.fromEntries(ms.map(m=>[m.id,m]));
   const list=[...state.entries].filter(e=>ui.filter==="all"||e.metricId===ui.filter).sort((a,b)=>(b.at||0)-(a.at||0));
   const chips=`<button class="chip ${ui.filter==="all"?"on":""}" data-act="filter" data-id="all">Vše</button>`+ms.map(m=>`<button class="chip ${ui.filter===m.id?"on":""}" data-act="filter" data-id="${esc(m.id)}">${esc(m.name)}</button>`).join("");
-  const rows=list.slice(0,500).map(e=>{const p=pmap[e.personId],m=mmap[e.metricId];return`<tr><td>${new Date(e.at||0).toLocaleString("cs-CZ",{day:"numeric",month:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"})}</td><td>${esc(p?p.name:"Smazaný člověk")}</td><td>${esc(m?m.name:"?")}</td><td>${esc(e.label||"—")}</td><td style="text-align:right"><button class="btn sm danger" data-act="delEntry" data-id="${esc(e.id)}">Smazat</button></td></tr>`}).join("");
+  const rows=list.slice(0,500).map(e=>{const p=pmap[e.personId],m=mmap[e.metricId];return`<tr><td>${new Date(e.at||0).toLocaleString("cs-CZ",{day:"numeric",month:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"})}</td><td>${esc(p?p.name:"Smazaný člověk")}</td><td>${esc(m?m.name:"?")}</td><td>${esc(e.label||"—")}</td><td style="text-align:right">${canWritePerson(p)?`<button class="btn sm danger" data-act="delEntry" data-id="${esc(e.id)}">Smazat</button>`:""}</td></tr>`}).join("");
   return header("Historie záznamů")+`<div class="toolbar">${chips}<span class="badge" style="margin-left:auto">${list.length} záznamů</span></div>
   <div class="tbl"><table><thead><tr><th>Kdy</th><th>Člověk</th><th>Úkol</th><th>Kdo přišel</th><th></th></tr></thead><tbody>${rows||`<tr><td colspan="5" class="empty">Zatím žádné záznamy</td></tr>`}</tbody></table></div>`;
 }
 
 function viewSettings(){
   const ms=metrics(),ps=people();
+  if(!canAdmin())return header("Nastavení & Excel")+`<form class="sec" data-admin><h3>🔒 Jen pro správce</h3><p class="h">Nastavení lidí, cílů a import z Excelu může měnit jen správce.</p>
+    <div class="row-actions" style="margin-top:0"><input class="in" id="adminEmail" type="email" autocomplete="username" placeholder="E-mail správce" value="${esc(CFG.adminEmail||"")}"><input class="in" id="adminPw" type="password" autocomplete="current-password" placeholder="Heslo"><button class="btn pri">Přihlásit</button><span id="adminMsg" class="na"></span></div></form>`;
   const mRows=ms.map(m=>`<tr><td><input class="in" style="width:100%" data-edit="metricName" data-id="${esc(m.id)}" value="${esc(m.name)}"></td><td style="width:1%"><button class="btn sm danger" data-act="delMetric" data-id="${esc(m.id)}">Smazat</button></td></tr>`).join("");
-  const pRows=ps.map(p=>`<tr><td><input class="in" style="width:100%;min-width:140px" data-edit="personName" data-id="${esc(p.id)}" value="${esc(p.name)}"></td>${ms.map(m=>`<td><input class="in num" type="number" min="0" data-edit="target" data-id="${esc(p.id)}" data-m="${esc(m.id)}" value="${tgt(p,m)||""}" placeholder="0"></td>`).join("")}<td style="width:1%"><button class="btn sm danger" data-act="delPerson" data-id="${esc(p.id)}">Smazat</button></td></tr>`).join("");
-  return header("Nastavení & Excel")+`
+  const pRows=ps.map(p=>`<tr><td><input class="in" style="width:100%;min-width:140px" data-edit="personName" data-id="${esc(p.id)}" value="${esc(p.name)}"></td>${ms.map(m=>`<td><input class="in num" type="number" min="0" data-edit="target" data-id="${esc(p.id)}" data-m="${esc(m.id)}" value="${tgt(p,m)||""}" placeholder="0"></td>`).join("")}${authOn()?`<td><input class="in" style="min-width:190px" data-edit="login" data-id="${esc(p.id)}" value="${esc(loginOf(p))}"></td>`:""}<td style="width:1%"><button class="btn sm danger" data-act="delPerson" data-id="${esc(p.id)}">Smazat</button></td></tr>`).join("");
+  return header("Nastavení & Excel",authOn()?`<span class="na">Správce: ${esc(state.user)}</span><button class="btn sm" data-act="lock">Odhlásit</button>`:"")+
+  (authOn()?`<div class="sec"><h3>🔑 Hesla lidí</h3><p class="h">Každý člověk má svůj přihlašovací účet (sloupec „Přihlašovací účet“ níže). Ve Firebase konzoli → <b>Authentication → Users → Add user</b> založ účet s tímto e-mailem a heslem, které pak člověku řekneš. Heslo se v aplikaci nikde neukládá ani nezobrazuje.</p></div>`:"")+`
   <div class="sec"><h3>Úkoly (typy cílů)</h3><p class="h">Např. „Lidé na pohovor“, „Lidé na infa“. Každý úkol je sloupec v přehledu.</p>
     <table class="grid-set"><tbody>${mRows}</tbody></table>
     <div class="row-actions"><input class="in" id="newMetric" placeholder="Název nového úkolu"><button class="btn pri" data-act="addMetric">+ Přidat úkol</button></div></div>
   <div class="sec"><h3>Lidé a jejich cíle</h3><p class="h">Čísla jsou cíle pro každého člověka (prázdné = úkol nemá). Ukládá se automaticky po opuštění pole.</p>
-    <div class="tbl"><table class="grid-set"><thead><tr><th>Jméno</th>${ms.map(m=>`<th>${esc(m.name)}</th>`).join("")}<th></th></tr></thead><tbody>${pRows||`<tr><td class="empty" colspan="${ms.length+2}">Zatím nikdo</td></tr>`}</tbody></table></div>
+    <div class="tbl"><table class="grid-set"><thead><tr><th>Jméno</th>${ms.map(m=>`<th>${esc(m.name)}</th>`).join("")}${authOn()?"<th>Přihlašovací účet</th>":""}<th></th></tr></thead><tbody>${pRows||`<tr><td class="empty" colspan="${ms.length+3}">Zatím nikdo</td></tr>`}</tbody></table></div>
     <div class="row-actions"><input class="in" id="newPerson" placeholder="Jméno nového člověka"><button class="btn pri" data-act="addPerson">+ Přidat člověka</button></div></div>
   <div class="sec"><h3>Import z Excelu</h3><p class="h">Nahraj .xlsx nebo .csv. První sloupec = jméno, další sloupce = úkoly, čísla = cíle. Existující lidi a úkoly se podle názvu aktualizují, noví se přidají. Odškrtnuté záznamy (+1) se nemažou.</p>
     <pre class="tpl">Jméno        | Lidé na pohovor | Lidé na infa
@@ -467,6 +512,11 @@ async function removeLast(pId,mId){
   await write(()=>store.del("entries",id));
   toast("Odebrán poslední záznam",()=>write(()=>store.set("entries",id,rest)));
 }
+function newLogin(name){
+  const base=slug(name).replace(/-/g,".")||"clen";let l=base+"@"+DOMAIN,i=2;
+  while(state.people.some(p=>loginOf(p)===l))l=base+(i++)+"@"+DOMAIN;
+  return l;
+}
 function slug(s){return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40)||uid()}
 
 const confirmState={};
@@ -481,13 +531,14 @@ document.addEventListener("click",async ev=>{
   if(a==="plus")addEntry(el.dataset.p,el.dataset.m);
   else if(a==="minus")removeLast(el.dataset.p,el.dataset.m);
   else if(a==="goPerson"){ui.person=el.dataset.p;savePick();location.hash="zapis"}
-  else if(a==="pick"){ui.person=el.dataset.p;savePick();render()}
+  else if(a==="pick"){ui.person=el.dataset.p;savePick();document.querySelectorAll("#pw,#pwMsg").forEach(x=>x.tagName==="SPAN"?x.textContent="":x.value="");render()}
   else if(a==="close")closeModal();
   else if(a==="plusLbl"){const inp=el.parentElement.querySelector("input");const v=inp.value.trim().slice(0,80);inp.value="";addEntry(el.dataset.p,el.dataset.m,v)}
+  else if(a==="lock"){if(fb){await fb.signOut();toast("Zamčeno 🔒")}}
   else if(a==="filter"){ui.filter=el.dataset.id;render()}
   else if(a==="delEntry"){const e=state.entries.find(x=>x.id===el.dataset.id);if(!e)return;const {id,...rest}=e;await write(()=>store.del("entries",id));toast("Záznam smazán",()=>write(()=>store.set("entries",id,rest)))}
   else if(a==="addMetric"){const i=document.getElementById("newMetric"),n=i.value.trim();if(!n)return;let id=slug(n);if(state.metrics.some(m=>m.id===id))id+="-"+uid().slice(-4);await write(()=>store.set("metrics",id,{name:n,order:state.metrics.length+1}))}
-  else if(a==="addPerson"){const i=document.getElementById("newPerson"),n=i.value.trim();if(!n)return;const t={};metrics().forEach(m=>t[m.id]=0);await write(()=>store.add("people",{name:n,order:state.people.length+1,targets:t}))}
+  else if(a==="addPerson"){const i=document.getElementById("newPerson"),n=i.value.trim();if(!n)return;const t={};metrics().forEach(m=>t[m.id]=0);const rec={name:n,order:state.people.length+1,targets:t};if(authOn())rec.login=newLogin(n);await write(()=>store.add("people",rec))}
   else if(a==="delMetric"){if(!confirmTwice("m"+el.dataset.id,el,"Klikni znovu – smaže i záznamy"))return;const id=el.dataset.id;for(const e of state.entries.filter(x=>x.metricId===id))await write(()=>store.del("entries",e.id));await write(()=>store.del("metrics",id))}
   else if(a==="delPerson"){if(!confirmTwice("p"+el.dataset.id,el,"Klikni znovu – smaže i záznamy"))return;const id=el.dataset.id;for(const e of state.entries.filter(x=>x.personId===id))await write(()=>store.del("entries",e.id));await write(()=>store.del("people",id))}
   else if(a==="copyStats"||a==="copyEntries"){
@@ -496,6 +547,22 @@ document.addEventListener("click",async ev=>{
     else{const pm=Object.fromEntries(ps.map(p=>[p.id,p.name])),mm=Object.fromEntries(ms.map(m=>[m.id,m.name]));rows=[["Datum","Člověk","Úkol","Kdo přišel"]];[...state.entries].sort((x,y)=>(x.at||0)-(y.at||0)).forEach(e=>rows.push([new Date(e.at||0).toLocaleString("cs-CZ"),pm[e.personId]||"",mm[e.metricId]||"",e.label||""]))}
     const tsv=rows.map(r=>r.map(c=>String(c).replace(/[\t\n]/g," ")).join("\t")).join("\n");
     try{await navigator.clipboard.writeText(tsv);toast("Zkopírováno – vlož do Excelu (Ctrl+V)")}catch(e){toast("Kopírování prohlížeč nepovolil.")}
+  }
+});
+const AUTH_ERR=e=>{const c=e&&e.code||"";return c.includes("too-many")?"Moc pokusů, zkus to za chvíli.":(c.includes("network")?"Chyba připojení.":"Špatné heslo.")};
+document.addEventListener("submit",async ev=>{
+  const f=ev.target;
+  if(!f.matches("[data-unlock],[data-admin]"))return;
+  ev.preventDefault();
+  if(!fb)return;
+  if(f.dataset.unlock!==undefined){
+    const p=state.people.find(x=>x.id===f.dataset.unlock),pw=f.querySelector("#pw").value,msg=f.querySelector("#pwMsg");
+    if(!p||!pw)return;msg.textContent="Ověřuji…";
+    try{await fb.signIn(loginOf(p),pw);toast("Odemčeno 🔓 – můžeš zapisovat")}catch(e){const m=f.querySelector("#pwMsg");if(m)m.textContent=AUTH_ERR(e)}
+  }else{
+    const em=f.querySelector("#adminEmail").value.trim(),pw=f.querySelector("#adminPw").value,msg=f.querySelector("#adminMsg");
+    if(!em||!pw)return;msg.textContent="Ověřuji…";
+    try{await fb.signIn(em,pw);if(em.toLowerCase()!==String(CFG.adminEmail||"").toLowerCase())toast("Přihlášeno, ale tento účet není správce.")}catch(e){const m=document.getElementById("adminMsg");if(m)m.textContent=AUTH_ERR(e)}
   }
 });
 document.getElementById("ov").addEventListener("click",e=>{if(e.target.id==="ov")closeModal()});
@@ -510,6 +577,7 @@ document.addEventListener("change",async e=>{
   if(t.id==="xls"&&t.files[0]){importFile(t.files[0]);t.value="";return}
   if(!k)return;
   if(k==="metricName"){const m=state.metrics.find(x=>x.id===t.dataset.id);const v=t.value.trim();if(m&&v&&v!==m.name){const {id,...r}=m;await write(()=>store.set("metrics",id,{...r,name:v}))}}
+  if(k==="login"){const p=state.people.find(x=>x.id===t.dataset.id);const v=t.value.trim().toLowerCase();if(p&&v.includes("@")&&v!==loginOf(p)){const {id,...r}=p;await write(()=>store.set("people",id,{...r,login:v}))}}
   if(k==="personName"){const p=state.people.find(x=>x.id===t.dataset.id);const v=t.value.trim();if(p&&v&&v!==p.name){const {id,...r}=p;await write(()=>store.set("people",id,{...r,name:v}))}}
   if(k==="target"){const p=state.people.find(x=>x.id===t.dataset.id);if(!p)return;const v=Math.max(0,parseInt(t.value,10)||0);const {id,...r}=p;await write(()=>store.set("people",id,{...r,targets:{...(r.targets||{}),[t.dataset.m]:v}}))}
 });
@@ -545,7 +613,7 @@ async function importFile(file){
       const targets={...(ex&&ex.targets||{})};
       mIds.forEach((id,i)=>{if(id){const v=parseInt(r[i+1],10);targets[id]=v>0?v:0}});
       if(ex){const {id,...rest}=ex;await write(()=>store.set("people",id,{...rest,targets}));updated++}
-      else{await write(()=>store.add("people",{name,order:state.people.length+added+1,targets}));added++}
+      else{const rec={name,order:state.people.length+added+1,targets};if(authOn())rec.login=newLogin(name);await write(()=>store.add("people",rec));added++}
     }
     say(`Hotovo: ${added} nových, ${updated} aktualizovaných lidí.`);toast("Import dokončen");
   }catch(e){say(e.message==="load"?"Nepodařilo se načíst knihovnu pro Excel.":("Import selhal: "+e.message))}

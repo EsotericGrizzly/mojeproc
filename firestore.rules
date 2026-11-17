@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // !!! Musí odpovídat adminEmail ve firebase-config.js
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'spravce@ostrov.tym';
+    }
+
+    // Je přihlášený uživatel majitelem daného člověka (people/{pid}.login)?
+    function ownsPerson(pid) {
+      let path = /databases/$(database)/documents/people/$(pid);
+      return request.auth != null && exists(path)
+        && get(path).data.get('login', pid + '@ostrov.tym') == request.auth.token.email;
+    }
+
+    // Přehled vidí všichni, měnit lidi a úkoly smí jen správce
+    match /people/{id}  { allow read: if true; allow write: if isAdmin(); }
+    match /metrics/{id} { allow read: if true; allow write: if isAdmin(); }
+
+    // Záznamy (+1): každý jen za sebe, správce za kohokoli
+    match /entries/{id} {
+      allow read: if true;
+      allow create: if isAdmin() || (
+        ownsPerson(request.resource.data.personId)
+        && request.resource.data.keys().hasOnly(['personId', 'metricId', 'label', 'at'])
+        && request.resource.data.label is string
+        && request.resource.data.label.size() <= 80
+        && request.resource.data.at is number
+      );
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || ownsPerson(resource.data.personId);
+    }
+  }
+}
