@@ -12,11 +12,11 @@
   - když klikne na **↻ Obnovit teď**.
 - Google ukládá úpravy v tabulce okamžitě, takže **změna se na webu objeví zhruba do 30 s**, výjimečně o něco později.
 
-## Tabulka „Moje Proč – cíle“
-- List **Cíle**: řádek = člověk, sloupec = úkol (Pohovory, Info 1, BJ, …), čísla = cíl. Prázdná buňka znamená, že úkol nemá.
-- List **Plnění**: stejné sloupce a lidé, čísla = kolik už splnil. **Sem se zapisuje.**
-- Nový úkol přidáš novým sloupcem v obou listech, nového člověka novým řádkem v obou listech.
-- Jména v obou listech se párují podle jména. Když se neshodují, páruje se podle pořadí řádků a webovka na to upozorní.
+## Tabulka „Moje Proč – cíle“ (list „Cíle“)
+- **Řádek 4:** názvy úkolů (Pohovory, Info 1, BJ, …). Každý úkol má dva sloupce.
+- **Řádek 5:** „Cíl“ a „Stav“.
+- **Od řádku 6:** jeden řádek = jeden člověk. Do sloupců **Cíl** se píše cíl (prázdné = úkol nemá), do žlutých sloupců **Stav** každý zapisuje, kolik už splnil.
+- Nový úkol přidáš dvojicí sloupců Cíl/Stav (název do řádku 4) a nového člověka novým řádkem. Webovka si to načte sama, čte sloupce až po Z a řádky až po 300.
 - Každý úkol váží v procentech stejně, takže cíl 600 BJ se počítá stejně jako cíl 3 pohovorů.
 
 ## Nastavení (jednou)
@@ -26,7 +26,7 @@
 3. Zapni GitHub Pages: Settings → Pages → větev s kódem, složka `/ (root)`.
 
 ## Zapisování
-Na webu v záložce **Zapisování** si člověk vybere sebe a klikne na **✏️ Zapsat do tabulky (můj řádek)**. Otevře se mu list Plnění přímo na jeho řádku a tam přepíše číslo.
+Na webu v záložce **Zapisování** si člověk vybere sebe a klikne na **✏️ Zapsat do tabulky (můj řádek)**. Otevře se mu tabulka přímo na jeho řádku a tam přepíše číslo ve sloupci „Stav“.
 
 **Volitelně:** aby si lidé nepřepisovali čísla navzájem, nastav v tabulce u každého řádku *Data → Chránit listy a rozsahy* a povol ho jen tomu jednomu člověku.
 
