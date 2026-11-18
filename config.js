@@ -8,5 +8,7 @@
 window.TRACKER_CONFIG = {
   sheetUrl: "https://docs.google.com/spreadsheets/d/1fbQAd-CmBGL14_CIbvkRBai4-Ou7u7S6i_DlDpySxAU/edit#gid=0",
   headerRange: "A4:Z5",  // názvy úkolů + Cíl/Stav
-  dataRange: "A6:Z300"   // lidé
+  dataRange: "A6:Z300",  // lidé
+  // Jak se mají úkoly jmenovat na webu (název v tabulce → název na webu)
+  rename: { "Info 1": "Lidé na Info 1", "FA": "Analýzy" }
 };
