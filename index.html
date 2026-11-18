@@ -503,7 +503,7 @@ function viewEntry(){
       ${ents.length?`<div class="tags">${ents.slice(0,30).map(e=>`<span class="tag">${esc(e.label||"bez jména")} · ${ago(e.at||0)}<button title="Smazat" data-act="delEntry" data-id="${esc(e.id)}">×</button></span>`).join("")}</div>`:""}</div>`}).join("");
   return header("Zapisování")+`<div class="picker">${picker}</div>
     <div class="ehead"><div class="av" style="background:${colorFor(p.id,ps)}">${esc(initials(p.name))}</div><div><h2>${esc(p.name)}</h2>${isDone(s)?DONE_BADGE+" ":""}<span class="na">${s.pct} % splněno · ${s.done} z ${s.target} úkolů hotovo</span></div></div>
-    ${sm?`<a class="btn pri sheet-edit" href="${sheetEditUrl(p.row)}" target="_blank" rel="noopener">✏️ Zapsat do tabulky (můj řádek)</a>`:""}
+    ${sm?`<a class="btn pri sheet-edit" href="${sheetEditUrl(p.row)}" target="_blank" rel="noopener">✏️ Zapsat splnění (můj řádek)</a>`:""}
     <div class="egrid">${cards}</div>`;
 }
 
