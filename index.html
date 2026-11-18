@@ -366,7 +366,7 @@ async function init(){
   SHEET=sheetInfo(CFG.sheetUrl);
   if(SHEET){
     state.mode="sheet";document.body.classList.add("sheet-mode");
-    const pb=document.getElementById("promoBtn");pb.href=sheetEditUrl();pb.target="_blank";pb.rel="noopener";pb.textContent="Otevřít tabulku →";
+    const pb=document.getElementById("promoBtn");pb.href=sheetEditUrl();pb.target="_blank";pb.rel="noopener";pb.textContent="Zapsat splnění →";
     if(ui.view!=="prehled")location.hash="prehled";
     await loadSheet();
     setInterval(()=>{if(!document.hidden)loadSheet()},30000);
@@ -459,7 +459,7 @@ function viewDashboard(){
   return`<section class="quest">
     <div class="qtop"><div><div class="kicker">Naše výzva</div><h1>Mise: Tropický ostrov 🌴</h1>
       <p>Když společně splníme všechny cíle, <b>letíme na ostrov</b>. Každý splněný kus nás posune blíž k pláži.</p></div>
-      ${sheetMode()?`<a class="btn pri" href="${sheetEditUrl()}" target="_blank" rel="noopener" style="text-decoration:none;white-space:nowrap">✏️ Zapsat do tabulky</a>`:`<a class="btn pri" href="#zapis" style="text-decoration:none;white-space:nowrap">+ Zapsat</a>`}</div>
+      ${sheetMode()?`<a class="btn pri" href="${sheetEditUrl()}" target="_blank" rel="noopener" style="text-decoration:none;white-space:nowrap">✏️ Zapsat splnění</a>`:`<a class="btn pri" href="#zapis" style="text-decoration:none;white-space:nowrap">+ Zapsat</a>`}</div>
     <div class="journey"><div class="track" data-target="${teamPct}"><i style="width:${ui.lastPct}%"></i><span class="plane" style="left:${ui.lastPct}%"><b>✈️</b></span></div><span class="isle">🏝️</span></div>
     <div class="qstats">
       <div><b>${teamPct} %</b><span>cesty za námi</span></div>
@@ -475,9 +475,9 @@ function viewDashboard(){
 }
 
 function viewRight(){
-  if(sheetMode())return`<section><h2>Tabulka 📊</h2>
-    <p class="na" style="line-height:1.6;margin:0 0 14px">Svůj stav zapisuj do žlutých sloupců „Stav“ ve sdílené tabulce. Kliknutím na své jméno v Posádce se otevře rovnou tvůj řádek.</p>
-    <a class="btn pri" href="${sheetEditUrl()}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">✏️ Otevřít tabulku</a></section>`;
+  if(sheetMode())return`<section><h2>Stav úkolů 📊</h2>
+    <p class="na" style="line-height:1.6;margin:0 0 14px">Stav úkolů se vede ve sdílené tabulce a můžeš ho tam rovnou upravit. Svůj stav zapisuj do žlutých sloupců „Stav“. Kliknutím na své jméno v Posádce se otevře rovnou tvůj řádek.</p>
+    <a class="btn pri" href="${sheetEditUrl()}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">✏️ Upravit v tabulce</a></section>`;
   const ms=metrics(),ps=people(),cm=countMap();
   const pmap=Object.fromEntries(ps.map(p=>[p.id,p])),mmap=Object.fromEntries(ms.map(m=>[m.id,m]));
   const recent=[...state.entries].sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,8).map(e=>{
