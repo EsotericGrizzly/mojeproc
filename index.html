@@ -160,6 +160,10 @@ pre.tpl{background:var(--panel2);border:1px solid var(--line2);border-radius:8px
 tr.row-done td{background:rgba(184,242,106,.06)}
 .sheet-mode .nav[data-view="historie"],.sheet-mode .nav[data-view="nastaveni"],.sheet-mode .navh.other{display:none}
 .sheet-edit{display:inline-block;text-decoration:none;margin-bottom:18px;padding:12px 18px;font-size:15px}
+.minis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 18px;min-width:220px}
+.mini .gt{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin-bottom:5px;color:var(--muted)}
+.mini .gt>b{font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini .gt span{color:var(--dim);white-space:nowrap}.mini .gt span b{color:var(--text)}
 /* zapis view */
 .picker{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
 .pick{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:99px;border:1px solid var(--line2);background:var(--panel);font-weight:500}
@@ -276,7 +280,32 @@ function remoteStore(db){
 /* ---------------- Google Sheets (read-only source, people edit the sheet itself) ---------------- */
 let SHEET=null;
 function sheetInfo(url){const m=String(url||"").match(/\/d\/([a-zA-Z0-9_-]+)/),g=String(url||"").match(/[#&?]gid=(\d+)/);return m?{id:m[1],gid:g?g[1]:"0"}:null}
-const sheetEditUrl=row=>`https://docs.google.com/spreadsheets/d/${SHEET.id}/edit#gid=${SHEET.gid}${row?"&range=A"+row:""}`;
+const twoSheets=()=>!!(CFG.targetsSheet&&CFG.doneSheet);
+const sheetEditUrl=row=>`https://docs.google.com/spreadsheets/d/${SHEET.id}/edit#gid=${twoSheets()&&CFG.doneGid!=null?CFG.doneGid:SHEET.gid}${row?"&range=A"+row:""}`;
+const num=v=>Math.max(0,parseFloat(String(v??"").replace(/\s/g,"").replace(",","."))||0);
+const normName=n=>String(n||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
+/* two sheets: targets ("Cíle") and progress ("Plnění"), same layout – name in column A, one column per task */
+function applyTwoSheets(tRows,dRows){
+  if(!tRows.length)throw new Error("empty");
+  const head=tRows[0].map(h=>String(h).trim()),mm={},cols=[];
+  head.forEach((h,i)=>{if(i===0||!h)return;const id=slug(h);mm[id]=mm[id]||{id,name:h,order:Object.keys(mm).length+1};cols.push({i,id,name:normName(h)})});
+  const dHead=(dRows[0]||[]).map(normName);
+  const dCol=c=>{const j=dHead.indexOf(c.name);return j>0?j:c.i};
+  const byName={};dRows.slice(1).forEach((r,ri)=>{const k=normName(r[0]);if(k&&!byName[k])byName[k]={r,row:ri+2}});
+  const people=[],counts={},used={},warn=[];
+  tRows.slice(1).forEach((r,ri)=>{
+    const name=String(r[0]||"").trim();if(!name)return;
+    let id=slug(name);if(used[id])id+="-"+(ri+2);used[id]=1;
+    let d=byName[normName(name)];
+    if(!d&&dRows[ri+1]){d={r:dRows[ri+1],row:ri+2};warn.push(`${name} (v Plnění je „${String(dRows[ri+1][0]||"").trim()}“)`)}
+    const targets={};
+    cols.forEach(c=>{targets[c.id]=num(r[c.i]);counts[id+"|"+c.id]=d?num(d.r[dCol(c)]):0});
+    people.push({id,name,order:people.length+1,targets,row:d?d.row:ri+2});
+  });
+  state.metrics=Object.values(mm);state.people=people;state.counts=counts;state.entries=[];
+  state.sheetWarn=warn.length?"Jména v listech Cíle a Plnění se neshodují: "+warn.join(", ")+". Spárováno podle pořadí řádků.":null;
+  COLS.forEach(c=>state.ready[c]=true);state.loadedAt=Date.now();state.sheetError=null;
+}
 function parseCSV(t){
   const rows=[];let r=[],f="",q=false;
   for(let i=0;i<t.length;i++){const c=t[i];
@@ -309,10 +338,16 @@ let loadingSheet=false;
 async function loadSheet(){
   if(loadingSheet)return;loadingSheet=true;
   try{
-    const res=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET.id}/gviz/tq?tqx=out:csv&headers=1&gid=${SHEET.gid}&_=${Date.now()}`,{cache:"no-store"});
-    const txt=await res.text();
-    if(!res.ok||/^\s*</.test(txt))throw new Error("access");
-    applySheet(parseCSV(txt));
+    const get=async q=>{
+      const res=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET.id}/gviz/tq?tqx=out:csv&headers=1&${q}&_=${Date.now()}`,{cache:"no-store"});
+      const txt=await res.text();
+      if(!res.ok||/^\s*</.test(txt))throw new Error("access");
+      return parseCSV(txt);
+    };
+    if(twoSheets()){
+      const [t,d]=await Promise.all([get("sheet="+encodeURIComponent(CFG.targetsSheet)),get("sheet="+encodeURIComponent(CFG.doneSheet))]);
+      applyTwoSheets(t,d);
+    }else applySheet(await get("gid="+SHEET.gid));
   }catch(e){
     console.warn(e);
     state.sheetError=e.message==="access"?"Tabulku se nepodařilo načíst – je nasdílená „Každý, kdo má odkaz“?":"Tabulku se nepodařilo načíst – zkontroluj připojení.";
@@ -362,7 +397,8 @@ function countMap(){if(state.counts)return state.counts;const m={};for(const e o
 const isDone=st=>st.target>0&&st.done>=st.target;
 const DONE_BADGE=`<span class="done-badge">🧳 Mise splněna – bal kufry!</span>`;
 function pct(d,t){return t>0?Math.round(Math.min(d,t)/t*100):0}
-function personStats(p,ms,cm){let d=0,t=0,raw=0;for(const m of ms){const tt=tgt(p,m),dd=cm[p.id+"|"+m.id]||0;raw+=dd;if(tt){t+=tt;d+=Math.min(dd,tt)}}return{done:d,target:t,raw,pct:pct(d,t)}}
+// every task weighs the same (a goal of 600 BJ counts like a goal of 3 interviews)
+function personStats(p,ms,cm){let done=0,tasks=0,frac=0,raw=0;for(const m of ms){const tt=tgt(p,m),dd=cm[p.id+"|"+m.id]||0;raw+=dd;if(tt){tasks++;frac+=Math.min(dd,tt)/tt;if(dd>=tt)done++}}return{done,target:tasks,raw,frac,pct:tasks?Math.round(frac/tasks*100):0}}
 function ago(ts){const s=(Date.now()-ts)/1000;if(s<60)return"právě teď";if(s<3600)return Math.floor(s/60)+" min";if(s<86400)return Math.floor(s/3600)+" h";return new Date(ts).toLocaleDateString("cs-CZ",{day:"numeric",month:"short"})}
 function lidi(n){return n===1?"člověk":(n>=2&&n<=4?"lidé":"lidí")}
 const bar=(p,cls="")=>`<div class="bar ${cls} ${p>=100?"done":""}"><i style="width:${p}%"></i></div>`;
@@ -394,6 +430,7 @@ function render(){
 
 function header(title,extra){
   return`<div class="top"><h1>${title}</h1><div style="display:flex;gap:10px;align-items:center">${extra||""}</div></div>`+
+    (state.sheetWarn?`<div class="note">${esc(state.sheetWarn)}</div>`:"")+
     (state.sheetError?`<div class="note">${esc(state.sheetError)}</div>`:"")+
     (state.stale?`<div class="note">Data nemusí být aktuální – čekám na spojení se serverem.</div>`:"")+
     (state.readOnly?`<div class="note">Máš jen čtecí přístup. Pro přidávání požádej vlastníka o úroveň Contributor.</div>`:"");
@@ -403,8 +440,9 @@ function viewDashboard(){
   const ms=metrics(),ps=people(),cm=countMap();
   if(!ms.length||!ps.length)return header("Vítej v trackeru 👋")+`<div class="sec"><h3>Zatím tu nic není</h3><p class="h">Přidej lidi a úkoly v Nastavení, nebo je nahraj z Excelu.</p><a class="btn pri" href="#nastaveni" style="text-decoration:none">Otevřít nastavení</a></div>`;
   let tD=0,tT=0;const total=state.counts?Object.values(state.counts).reduce((a,b)=>a+b,0):state.entries.length;
-  ps.forEach(p=>{const s=personStats(p,ms,cm);tD+=s.done;tT+=s.target});
-  const teamPct=pct(tD,tT);
+  let fr=0,finished=0;
+  ps.forEach(p=>{const s=personStats(p,ms,cm);tD+=s.done;tT+=s.target;fr+=s.frac;if(isDone(s))finished++});
+  const teamPct=tT?Math.floor(fr/tT*100):0;
   const week=state.entries.filter(e=>Date.now()-(e.at||0)<7*864e5).length;
   const visMs=ms,rows=ps;
 
@@ -416,31 +454,29 @@ function viewDashboard(){
 
   const body=rows.map(p=>{
     const s=personStats(p,ms,cm),col=colorFor(p.id,ps);
-    const goals=visMs.map(m=>{
+    const goals=`<td><div class="minis">${visMs.filter(m=>tgt(p,m)||cm[p.id+"|"+m.id]).map(m=>{
       const t=tgt(p,m),d=cm[p.id+"|"+m.id]||0;
-      if(!t&&!d)return`<td class="goal"><span class="na">— bez cíle</span></td>`;
-      return`<td class="goal"><div class="gt"><b>${d}${t?` <span>/ ${t}</span>`:""}</b><span>${t?pct(d,t)+" %":""}</span></div>
-        ${bar(t?pct(d,t):100)}</td>`}).join("");
+      return`<div class="mini"><div class="gt"><b>${esc(m.name)}</b><span><b>${d}</b>${t?" / "+t:""}</span></div>${bar(t?pct(d,t):100)}</div>`}).join("")||`<span class="na">Bez cílů</span>`}</div></td>`;
     const fin=isDone(s);
-    return`<tr class="ov-row ${fin?"row-done":""}" data-act="goPerson" data-p="${esc(p.id)}" title="Otevřít v Zapisování"><td><div class="who"><div class="av" style="background:${col}">${esc(initials(p.name))}</div><div><b>${esc(p.name)}</b>${fin?DONE_BADGE:`<span>${s.raw} ${lidi(s.raw)} celkem</span>`}</div></div></td>${goals}
-      <td class="tot">${fin?"🏝️ ":""}${s.pct} %<small>${s.done} / ${s.target}</small></td></tr>`}).join("")||`<tr><td colspan="${visMs.length+2}" class="empty">Zatím nikdo</td></tr>`;
+    return`<tr class="ov-row ${fin?"row-done":""}" data-act="goPerson" data-p="${esc(p.id)}" title="Otevřít v Zapisování"><td><div class="who"><div class="av" style="background:${col}">${esc(initials(p.name))}</div><div><b>${esc(p.name)}</b>${fin?DONE_BADGE:`<span>${s.done} z ${s.target} úkolů splněno</span>`}</div></div></td>${goals}
+      <td class="tot">${fin?"🏝️ ":""}${s.pct} %<small>${s.done} / ${s.target} úkolů</small></td></tr>`}).join("")||`<tr><td colspan="3" class="empty">Zatím nikdo</td></tr>`;
 
-  const left=Math.max(0,tT-tD);
+  const allDone=tT>0&&tD>=tT;
   return`<section class="quest">
     <div class="qtop"><div><div class="kicker">Naše výzva</div><h1>Mise: Tropický ostrov 🌴</h1>
-      <p>Když společně splníme všechny cíle, <b>letíme na ostrov</b>. Každý přivedený člověk nás posune blíž k pláži.</p></div>
+      <p>Když společně splníme všechny cíle, <b>letíme na ostrov</b>. Každý splněný kus nás posune blíž k pláži.</p></div>
       <a class="btn pri" href="#zapis" style="text-decoration:none;white-space:nowrap">+ Zapsat</a></div>
     <div class="journey"><div class="track" data-target="${teamPct}"><i style="width:${ui.lastPct}%"></i><span class="plane" style="left:${ui.lastPct}%"><b>✈️</b></span></div><span class="isle">🏝️</span></div>
     <div class="qstats">
       <div><b>${teamPct} %</b><span>cesty za námi</span></div>
-      <div><b>${left}</b><span>${left?"lidí zbývá do odletu":"CELÝ TÝM LETÍ NA OSTROV! 🛫"}</span></div>
-      <div><b>${total}</b><span>přivedeno celkem</span></div>
+      <div><b>${allDone?"🛫":finished+" / "+ps.length}</b><span>${allDone?"CELÝ TÝM LETÍ NA OSTROV!":"lidí má sbaleno 🧳"}</span></div>
+      <div><b>${tD} / ${tT}</b><span>splněných úkolů</span></div>
       ${sheetMode()?`<div><b>${ps.length}</b><span>členů posádky</span></div>`:`<div><b>+${week}</b><span>za posledních 7 dní</span></div>`}
     </div>
-  </section>`+(state.stale||state.readOnly?header(""):"")+`
+  </section>`+(state.stale||state.readOnly||state.sheetWarn||state.sheetError?header(""):"")+`
   <div class="cards">${cards}</div>
   <h2 class="h2">Posádka</h2>
-  <div class="tbl"><table><thead><tr><th>Člověk</th>${visMs.map(m=>`<th>${esc(m.name)}</th>`).join("")}<th>Celkem</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  <div class="tbl"><table><thead><tr><th>Člověk</th><th>Úkoly</th><th>Celkem</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 function viewRight(){
@@ -464,7 +500,7 @@ function viewEntry(){
   const p=ps.find(x=>x.id===ui.person),s=personStats(p,ms,cm);
   const picker=ps.map(x=>{const st=personStats(x,ms,cm);return`<button class="pick ${x.id===p.id?"on":""}" data-act="pick" data-p="${esc(x.id)}"><span class="av" style="background:${colorFor(x.id,ps)}">${esc(initials(x.name))}</span>${esc(x.name)} <small>${isDone(st)?"🧳":st.pct+" %"}</small></button>`}).join("");
   const sm=sheetMode();
-  const cards=ms.map(m=>{
+  const cards=ms.filter(m=>!sm||tgt(p,m)||cm[p.id+"|"+m.id]).map(m=>{
     const t=tgt(p,m),d=cm[p.id+"|"+m.id]||0;
     const ents=state.entries.filter(e=>e.personId===p.id&&e.metricId===m.id).sort((a,b)=>(b.at||0)-(a.at||0));
     const pc=t?pct(d,t):(d?100:0);
@@ -473,7 +509,7 @@ function viewEntry(){
       ${sm?"":`<div class="addrow"><button class="big-pm" title="Odebrat poslední" data-act="minus" data-p="${esc(p.id)}" data-m="${esc(m.id)}" ${d?"":"disabled"}>−</button><input class="in" data-lbl-for="${esc(m.id)}" placeholder="Koho? (volitelné)"><button class="big-pm plus" title="Přidat 1 člověka" data-act="plusLbl" data-p="${esc(p.id)}" data-m="${esc(m.id)}">+</button></div>`}
       ${ents.length?`<div class="tags">${ents.slice(0,30).map(e=>`<span class="tag">${esc(e.label||"bez jména")} · ${ago(e.at||0)}<button title="Smazat" data-act="delEntry" data-id="${esc(e.id)}">×</button></span>`).join("")}</div>`:""}</div>`}).join("");
   return header("Zapisování")+`<div class="picker">${picker}</div>
-    <div class="ehead"><div class="av" style="background:${colorFor(p.id,ps)}">${esc(initials(p.name))}</div><div><h2>${esc(p.name)}</h2>${isDone(s)?DONE_BADGE+" ":""}<span class="na">${s.pct} % splněno · ${s.raw} ${lidi(s.raw)} celkem</span></div></div>
+    <div class="ehead"><div class="av" style="background:${colorFor(p.id,ps)}">${esc(initials(p.name))}</div><div><h2>${esc(p.name)}</h2>${isDone(s)?DONE_BADGE+" ":""}<span class="na">${s.pct} % splněno · ${s.done} z ${s.target} úkolů hotovo</span></div></div>
     ${sm?`<a class="btn pri sheet-edit" href="${sheetEditUrl(p.row)}" target="_blank" rel="noopener">✏️ Zapsat do tabulky (můj řádek)</a>`:""}
     <div class="egrid">${cards}</div>`;
 }

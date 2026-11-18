@@ -12,19 +12,21 @@
   - když klikne na **↻ Obnovit teď**.
 - Google ukládá úpravy v tabulce okamžitě, takže **změna se na webu objeví zhruba do 30 s**, výjimečně o něco později.
 
+## Tabulka „Moje Proč – cíle“
+- List **Cíle**: řádek = člověk, sloupec = úkol (Pohovory, Info 1, BJ, …), čísla = cíl. Prázdná buňka znamená, že úkol nemá.
+- List **Plnění**: stejné sloupce a lidé, čísla = kolik už splnil. **Sem se zapisuje.**
+- Nový úkol přidáš novým sloupcem v obou listech, nového člověka novým řádkem v obou listech.
+- Jména v obou listech se párují podle jména. Když se neshodují, páruje se podle pořadí řádků a webovka na to upozorní.
+- Každý úkol váží v procentech stejně, takže cíl 600 BJ se počítá stejně jako cíl 3 pohovorů.
+
 ## Nastavení (jednou)
-1. Vytvoř Google Tabulku a importuj do ní `tabulka-sablona.csv`, nebo přepiš záhlaví ručně:
-   `Jméno | Lidé na pohovor – cíl | Lidé na pohovor – hotovo | Lidé na infa – cíl | Lidé na infa – hotovo`
-   - Každý úkol má dva sloupce: `<název> – cíl` a `<název> – hotovo`. Další úkol přidáš dalšími dvěma sloupci.
-   - Jeden řádek patří jednomu člověku.
-2. **Sdílet → Obecný přístup → Každý, kdo má odkaz → Čtenář.** Bez toho ji webovka nepřečte.
+1. V tabulce klikni na **Sdílet → Obecný přístup → Každý, kdo má odkaz → Čtenář**. Bez toho ji webovka nepřečte.
    Členům týmu dej právo **Editor** (přes jejich Google e-mail).
-3. Zkopíruj odkaz na tabulku (z adresního řádku) do `config.js`:
-   `sheetUrl: "https://docs.google.com/spreadsheets/d/…/edit#gid=0"`
-4. Zapni GitHub Pages: Settings → Pages → větev s kódem, složka `/ (root)`.
+2. Odkaz na tabulku a názvy listů jsou v `config.js`, ten je už vyplněný.
+3. Zapni GitHub Pages: Settings → Pages → větev s kódem, složka `/ (root)`.
 
 ## Zapisování
-Na webu v záložce **Zapisování** si člověk vybere sebe a klikne na **✏️ Zapsat do tabulky (můj řádek)**. Otevře se mu tabulka přímo na jeho řádku a tam přepíše číslo ve sloupci „hotovo“.
+Na webu v záložce **Zapisování** si člověk vybere sebe a klikne na **✏️ Zapsat do tabulky (můj řádek)**. Otevře se mu list Plnění přímo na jeho řádku a tam přepíše číslo.
 
 **Volitelně:** aby si lidé nepřepisovali čísla navzájem, nastav v tabulce u každého řádku *Data → Chránit listy a rozsahy* a povol ho jen tomu jednomu člověku.
 

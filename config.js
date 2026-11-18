@@ -1,9 +1,13 @@
 /*
- * Odkaz na Google Tabulku s daty (lidé, cíle, kolik kdo splnil).
- * Návod: viz NAVOD.md
- * Když je prázdné, stránka běží v ukázkovém režimu (data jen v tomto prohlížeči).
+ * Zdroj dat: Google Tabulka „Moje Proč – cíle“.
+ *  - list „Cíle“   = cíle každého člověka
+ *  - list „Plnění“ = kolik už splnil (sem se zapisuje)
+ * Oba listy mají stejné sloupce: Jméno | úkol 1 | úkol 2 | …
+ * Tabulka musí být nasdílená „Každý, kdo má odkaz → Čtenář“. Návod: NAVOD.md
  */
 window.TRACKER_CONFIG = {
-  sheetUrl: ""
-  // např. sheetUrl: "https://docs.google.com/spreadsheets/d/1AbCdEf.../edit#gid=0"
+  sheetUrl: "https://docs.google.com/spreadsheets/d/1fbQAd-CmBGL14_CIbvkRBai4-Ou7u7S6i_DlDpySxAU/edit",
+  targetsSheet: "Cíle",
+  doneSheet: "Plnění",
+  doneGid: 1 // ID listu „Plnění“ (kvůli odkazu „Zapsat do tabulky“)
 };
