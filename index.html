@@ -149,6 +149,16 @@ pre.tpl{background:var(--panel2);border:1px solid var(--line2);border-radius:8px
 .plane b{display:block;font-weight:400;transform:rotate(45deg)}
 @media (prefers-reduced-motion:reduce){.track>i,.plane{transition:none!important}}
 .isle{font-size:38px;line-height:1}
+.poolhead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:-8px 0 0}
+.poolhead b{color:#ffd23f;font-weight:600}
+.journey.gold{margin:12px 0 22px}
+.journey.gold .track>i{background:linear-gradient(90deg,#b8860b,#ffd23f);box-shadow:0 0 18px rgba(255,210,63,.5)}
+.journey.gold .isle{visibility:hidden}
+.plane.sack b{transform:none}
+.coin{display:block;font-size:12px;color:#ffd23f;margin-top:2px}
+.card.gold{border-color:rgba(255,210,63,.35)}
+.card.gold .bar>i{background:linear-gradient(90deg,#b8860b,#ffd23f)}
+.card.gold .pct{color:#ffd23f}
 .qstats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .qstats>div{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
 .qstats b{display:block;font-size:24px;font-weight:600}
@@ -250,7 +260,7 @@ const COLS=["metrics","people","entries"];
 const state={metrics:[],people:[],entries:[],ready:{},mode:"loading",readOnly:false,stale:false,counts:null};
 const CFG=window.TRACKER_CONFIG||{};
 const sheetMode=()=>state.mode==="sheet";
-const ui={view:"prehled",filter:"all",q:"",person:null,lastPct:0,flown:false};
+const ui={view:"prehled",filter:"all",q:"",person:null,last:{},flown:false};
 try{ui.person=localStorage.getItem("teamtracker.person")}catch(e){}
 function savePick(){try{localStorage.setItem("teamtracker.person",ui.person)}catch(e){}}
 
@@ -318,6 +328,7 @@ function applyGrid(head,data){
     const kind=k.startsWith("cil")?"t":(k.startsWith("stav")||k.startsWith("hotovo")||k.startsWith("splneno")?"d":null);if(!kind)continue;
     const id=slug(task);mm[id]=mm[id]||{id,name:displayName(task),order:Object.keys(mm).length+1};cols.push({j,id,kind});
   }
+  const POOL=CFG.pool&&CFG.pool.task?slug(CFG.pool.task):null;
   const people=[],counts={},used={};
   data.forEach((r,ri)=>{
     const name=String(r[0]||"").trim();if(!name)return;
@@ -327,6 +338,13 @@ function applyGrid(head,data){
     people.push({id,name,order:people.length+1,targets,row:ri+FIRST_DATA_ROW});
   });
   if(!cols.length)throw new Error("format");
+  state.pool=null;
+  if(POOL&&mm[POOL]){ // shared goal (e.g. BJ): everyone adds to one pot, personal targets for it are ignored
+    const by={};let sum=0;
+    people.forEach(p=>{const v=counts[p.id+"|"+POOL]||0;if(v)by[p.id]=v;sum+=v;delete counts[p.id+"|"+POOL];delete p.targets[POOL]});
+    state.pool={name:CFG.pool.label||mm[POOL].name,unit:CFG.pool.unit||CFG.pool.task,goal:Number(CFG.pool.goal)||0,sum,by};
+    delete mm[POOL];
+  }
   state.metrics=Object.values(mm);state.people=people;state.counts=counts;state.entries=[];
   COLS.forEach(c=>state.ready[c]=true);state.loadedAt=Date.now();state.sheetError=null;
 }
@@ -412,13 +430,14 @@ function render(){
   else if(ui.view==="nastaveni")main.innerHTML=viewSettings();
   else main.innerHTML=viewDashboard();
   right.innerHTML=viewRight();
-  const tr=main.querySelector(".track[data-target]");
-  if(tr){ // plane flies from where it was (0 on first load) to the current progress
+  const trs=main.querySelectorAll(".track[data-target]");
+  trs.forEach(tr=>{ // plane / sack moves from where it was (0 on first load) to the current progress
     const t=+tr.dataset.target,els=[tr.querySelector("i"),tr.querySelector(".plane")];
     const dur=ui.flown?0.9:2.6;els.forEach(e=>e.style.transitionDuration=dur+"s");
     void tr.offsetWidth;
-    els[0].style.width=t+"%";els[1].style.left=t+"%";ui.lastPct=t;ui.flown=true;
-  }
+    els[0].style.width=t+"%";els[1].style.left=t+"%";ui.last[tr.dataset.key]=t;
+  });
+  if(trs.length)ui.flown=true;
   if(keepFocus==="q"){const q=document.getElementById("q");if(q){q.focus();try{q.setSelectionRange(caret,caret)}catch(e){}}}
   document.querySelectorAll("[data-lbl-for]").forEach(i=>{const v=drafts[i.dataset.lblFor];if(v)i.value=v;if(i.dataset.lblFor===lblFocus){i.focus();try{i.setSelectionRange(caret,caret)}catch(e){}}});
 }
@@ -452,15 +471,20 @@ function viewDashboard(){
       const t=tgt(p,m),d=cm[p.id+"|"+m.id]||0;
       return`<div class="mini"><div class="gt"><b>${esc(m.name)}</b><span><b>${d}</b>${t?" / "+t:""}</span></div>${bar(t?pct(d,t):100)}</div>`}).join("")||`<span class="na">Bez cílů</span>`}</div></td>`;
     const fin=isDone(s);
-    return`<tr class="ov-row ${fin?"row-done":""}" data-act="goPerson" data-p="${esc(p.id)}" title="${sheetMode()?"Otevřít řádek v tabulce":"Otevřít v Zapisování"}"><td><div class="who"><div class="av" style="background:${col}">${esc(initials(p.name))}</div><div><b>${esc(p.name)}</b>${fin?DONE_BADGE:`<span>${s.done} z ${s.target} úkolů splněno</span>`}</div></div></td>${goals}
+    return`<tr class="ov-row ${fin?"row-done":""}" data-act="goPerson" data-p="${esc(p.id)}" title="${sheetMode()?"Otevřít řádek v tabulce":"Otevřít v Zapisování"}"><td><div class="who"><div class="av" style="background:${col}">${esc(initials(p.name))}</div><div><b>${esc(p.name)}</b>${fin?DONE_BADGE:`<span>${s.done} z ${s.target} úkolů splněno</span>`}${state.pool&&state.pool.by[p.id]?`<span class="coin">💰 ${Number(state.pool.by[p.id]).toLocaleString("cs-CZ")} ${esc(state.pool.unit)} do měšce</span>`:""}</div></div></td>${goals}
       <td class="tot">${fin?"🏝️ ":""}${s.pct} %<small>${s.done} / ${s.target} úkolů</small></td></tr>`}).join("")||`<tr><td colspan="3" class="empty">Zatím nikdo</td></tr>`;
 
   const allDone=tT>0&&tD>=tT;
+  const P=state.pool,fmt=n=>Number(n).toLocaleString("cs-CZ");
+  const poolPct=P&&P.goal?Math.min(100,Math.floor(P.sum/P.goal*100)):0;
+  const poolHtml=P?`<div class="poolhead"><span>💰 Společný měšec – ${esc(P.name)}</span><b>${P.sum>=P.goal&&P.goal?"MĚŠEC JE PLNÝ! 🎉":`${fmt(P.sum)} / ${fmt(P.goal)} ${esc(P.unit)} · ${poolPct} %`}</b></div>
+    <div class="journey gold"><div class="track" data-key="pool" data-target="${poolPct}"><i style="width:${ui.last.pool||0}%"></i><span class="plane sack" style="left:${ui.last.pool||0}%"><b>💰</b></span></div><span class="isle">🏝️</span></div>`:"";
   return`<section class="quest">
     <div class="qtop"><div><div class="kicker">Naše výzva</div><h1>Mise: Tropický ostrov 🌴</h1>
       <p>Když společně splníme všechny cíle, <b>letíme na ostrov</b>. Každý splněný kus nás posune blíž k pláži.</p></div>
       ${sheetMode()?`<a class="btn pri" href="${sheetEditUrl()}" target="_blank" rel="noopener" style="text-decoration:none;white-space:nowrap">✏️ Zapsat splnění</a>`:`<a class="btn pri" href="#zapis" style="text-decoration:none;white-space:nowrap">+ Zapsat</a>`}</div>
-    <div class="journey"><div class="track" data-target="${teamPct}"><i style="width:${ui.lastPct}%"></i><span class="plane" style="left:${ui.lastPct}%"><b>✈️</b></span></div><span class="isle">🏝️</span></div>
+    <div class="journey"><div class="track" data-key="plane" data-target="${teamPct}"><i style="width:${ui.last.plane||0}%"></i><span class="plane" style="left:${ui.last.plane||0}%"><b>✈️</b></span></div><span class="isle">🏝️</span></div>
+    ${poolHtml}
     <div class="qstats">
       <div><b>${teamPct} %</b><span>cesty za námi</span></div>
       <div><b>${allDone?"🛫":finished+" / "+ps.length}</b><span>${allDone?"CELÝ TÝM LETÍ NA OSTROV!":"lidí má sbaleno 🧳"}</span></div>
@@ -471,7 +495,7 @@ function viewDashboard(){
   <h2 class="h2">Posádka</h2>
   <div class="tbl" style="margin-bottom:28px"><table class="crew"><thead><tr><th>Člověk</th><th>Úkoly</th><th>Celkem</th></tr></thead><tbody>${body}</tbody></table></div>
   <h2 class="h2">Týmové cíle</h2>
-  <div class="cards">${cards}</div>`;
+  <div class="cards">${P?`<div class="card gold"><div class="ic" style="background:#f5b82e">💰</div><div class="lbl">${esc(P.name)} – společně</div><div class="val">${fmt(P.sum)} <small>/ ${fmt(P.goal)}</small></div>${bar(poolPct)}<div class="pct">${poolPct} % měšce</div></div>`:""}${cards}</div>`;
 }
 
 function viewRight(){
@@ -654,7 +678,7 @@ async function importFile(file){
 }
 
 /* ---------------- routing ---------------- */
-function route(){window.scrollTo(0,0);ui.lastPct=0;ui.flown=false;const h=location.hash.slice(1);ui.view=(sheetMode()?["prehled"]:["prehled","zapis","historie","nastaveni"]).includes(h)?h:"prehled";ui.filter="all";render()}
+function route(){window.scrollTo(0,0);ui.last={};ui.flown=false;const h=location.hash.slice(1);ui.view=(sheetMode()?["prehled"]:["prehled","zapis","historie","nastaveni"]).includes(h)?h:"prehled";ui.filter="all";render()}
 window.addEventListener("hashchange",route);
 setInterval(()=>{if(ui.view==="prehled"&&!document.activeElement.matches("input"))render()},60000); // refresh "x min" labels
 route();

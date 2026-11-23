@@ -10,5 +10,8 @@ window.TRACKER_CONFIG = {
   headerRange: "A4:Z5",  // názvy úkolů + Cíl/Stav
   dataRange: "A6:Z300",  // lidé
   // Jak se mají úkoly jmenovat na webu (název v tabulce → název na webu)
-  rename: { "Info 1": "Lidé na Info 1", "FA": "Analýzy" }
+  rename: { "Info 1": "Lidé na Info 1", "FA": "Analýzy" },
+  // Společný cíl: sloupce „Stav“ tohoto úkolu se sčítají za všechny dohromady
+  // (osobní cíle tohoto úkolu se ignorují). Zobrazí se jako měšec zlata pod letadlem.
+  pool: { task: "BJ", label: "Bankovní jednotky", unit: "BJ", goal: 5500 }
 };
