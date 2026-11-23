@@ -339,11 +339,10 @@ function applyGrid(head,data){
   });
   if(!cols.length)throw new Error("format");
   state.pool=null;
-  if(POOL&&mm[POOL]){ // shared goal (e.g. BJ): everyone adds to one pot, personal targets for it are ignored
+  if(POOL&&mm[POOL]){ // shared goal (e.g. BJ): everyone's "Stav" adds up into one pot; it also stays a personal task
     const by={};let sum=0;
-    people.forEach(p=>{const v=counts[p.id+"|"+POOL]||0;if(v)by[p.id]=v;sum+=v;delete counts[p.id+"|"+POOL];delete p.targets[POOL]});
-    state.pool={name:CFG.pool.label||mm[POOL].name,unit:CFG.pool.unit||CFG.pool.task,goal:Number(CFG.pool.goal)||0,sum,by};
-    delete mm[POOL];
+    people.forEach(p=>{const v=counts[p.id+"|"+POOL]||0;if(v)by[p.id]=v;sum+=v});
+    state.pool={id:POOL,name:CFG.pool.label||mm[POOL].name,unit:CFG.pool.unit||CFG.pool.task,goal:Number(CFG.pool.goal)||0,sum,by};
   }
   state.metrics=Object.values(mm);state.people=people;state.counts=counts;state.entries=[];
   COLS.forEach(c=>state.ready[c]=true);state.loadedAt=Date.now();state.sheetError=null;
@@ -459,7 +458,7 @@ function viewDashboard(){
   const week=state.entries.filter(e=>Date.now()-(e.at||0)<7*864e5).length;
   const visMs=ms,rows=ps;
 
-  const cards=ms.map((m,i)=>{
+  const cards=ms.filter(m=>!(state.pool&&state.pool.id===m.id)).map((m,i)=>{
     let d=0,t=0;ps.forEach(p=>{const tt=tgt(p,m);d+=cm[p.id+"|"+m.id]||0;t+=tt});
     const p=pct(d,t);
     return`<div class="card"><div class="ic" style="background:${PALETTE[i%PALETTE.length]}">${esc(((String(m.name).trim().split(/\s+/).pop())||"?")[0].toUpperCase())}</div>
@@ -471,7 +470,7 @@ function viewDashboard(){
       const t=tgt(p,m),d=cm[p.id+"|"+m.id]||0;
       return`<div class="mini"><div class="gt"><b>${esc(m.name)}</b><span><b>${d}</b>${t?" / "+t:""}</span></div>${bar(t?pct(d,t):100)}</div>`}).join("")||`<span class="na">Bez cílů</span>`}</div></td>`;
     const fin=isDone(s);
-    return`<tr class="ov-row ${fin?"row-done":""}" data-act="goPerson" data-p="${esc(p.id)}" title="${sheetMode()?"Otevřít řádek v tabulce":"Otevřít v Zapisování"}"><td><div class="who"><div class="av" style="background:${col}">${esc(initials(p.name))}</div><div><b>${esc(p.name)}</b>${fin?DONE_BADGE:`<span>${s.done} z ${s.target} úkolů splněno</span>`}${state.pool&&state.pool.by[p.id]?`<span class="coin">💰 ${Number(state.pool.by[p.id]).toLocaleString("cs-CZ")} ${esc(state.pool.unit)} do měšce</span>`:""}</div></div></td>${goals}
+    return`<tr class="ov-row ${fin?"row-done":""}" data-act="goPerson" data-p="${esc(p.id)}" title="${sheetMode()?"Otevřít řádek v tabulce":"Otevřít v Zapisování"}"><td><div class="who"><div class="av" style="background:${col}">${esc(initials(p.name))}</div><div><b>${esc(p.name)}</b>${fin?DONE_BADGE:`<span>${s.done} z ${s.target} úkolů splněno</span>`}</div></div></td>${goals}
       <td class="tot">${fin?"🏝️ ":""}${s.pct} %<small>${s.done} / ${s.target} úkolů</small></td></tr>`}).join("")||`<tr><td colspan="3" class="empty">Zatím nikdo</td></tr>`;
 
   const allDone=tT>0&&tD>=tT;
