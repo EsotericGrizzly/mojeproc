@@ -150,6 +150,7 @@ pre.tpl{background:var(--panel2);border:1px solid var(--line2);border-radius:8px
 @media (prefers-reduced-motion:reduce){.track>i,.plane{transition:none!important}}
 .isle{font-size:38px;line-height:1}
 .poolhead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:-8px 0 0}
+.poolhead small{font-size:12px;color:var(--dim)}
 .poolhead b{color:#ffd23f;font-weight:600}
 .journey.gold{margin:12px 0 22px}
 .journey.gold .track>i{background:linear-gradient(90deg,#b8860b,#ffd23f);box-shadow:0 0 18px rgba(255,210,63,.5)}
@@ -342,7 +343,7 @@ function applyGrid(head,data){
   if(POOL&&mm[POOL]){ // shared goal (e.g. BJ): everyone's "Stav" adds up into one pot; it also stays a personal task
     const by={};let sum=0;
     people.forEach(p=>{const v=counts[p.id+"|"+POOL]||0;if(v)by[p.id]=v;sum+=v});
-    state.pool={id:POOL,name:CFG.pool.label||mm[POOL].name,unit:CFG.pool.unit||CFG.pool.task,goal:Number(CFG.pool.goal)||0,sum,by};
+    state.pool={id:POOL,title:CFG.pool.title||"Rozpočet výpravy",name:CFG.pool.label||mm[POOL].name,unit:CFG.pool.unit||CFG.pool.task,goal:Number(CFG.pool.goal)||0,sum,by};
   }
   state.metrics=Object.values(mm);state.people=people;state.counts=counts;state.entries=[];
   COLS.forEach(c=>state.ready[c]=true);state.loadedAt=Date.now();state.sheetError=null;
@@ -476,7 +477,7 @@ function viewDashboard(){
   const allDone=tT>0&&tD>=tT;
   const P=state.pool,fmt=n=>Number(n).toLocaleString("cs-CZ");
   const poolPct=P&&P.goal?Math.min(100,Math.floor(P.sum/P.goal*100)):0;
-  const poolHtml=P?`<div class="poolhead"><span>💰 Společný měšec – ${esc(P.name)}</span><b>${P.sum>=P.goal&&P.goal?"MĚŠEC JE PLNÝ! 🎉":`${fmt(P.sum)} / ${fmt(P.goal)} ${esc(P.unit)} · ${poolPct} %`}</b></div>
+  const poolHtml=P?`<div class="poolhead"><span>💰 ${esc(P.title)} <small>· ${P.sum>=P.goal&&P.goal?"naplněno, výprava platí!":"až se naplní, výprava platí"}</small></span><b>${P.sum>=P.goal&&P.goal?"ROZPOČET NAPLNĚN – LETÍME! 🎉":`${fmt(P.sum)} / ${fmt(P.goal)} ${esc(P.unit)} · ${poolPct} %`}</b></div>
     <div class="journey gold"><div class="track" data-key="pool" data-target="${poolPct}"><i style="width:${ui.last.pool||0}%"></i><span class="plane sack" style="left:${ui.last.pool||0}%"><b>💰</b></span></div><span class="isle">🏝️</span></div>`:"";
   return`<section class="quest">
     <div class="qtop"><div><div class="kicker">Naše výzva</div><h1>Mise: Tropický ostrov 🌴</h1>
@@ -494,7 +495,7 @@ function viewDashboard(){
   <h2 class="h2">Posádka</h2>
   <div class="tbl" style="margin-bottom:28px"><table class="crew"><thead><tr><th>Člověk</th><th>Úkoly</th><th>Celkem</th></tr></thead><tbody>${body}</tbody></table></div>
   <h2 class="h2">Týmové cíle</h2>
-  <div class="cards">${P?`<div class="card gold"><div class="ic" style="background:#f5b82e">💰</div><div class="lbl">${esc(P.name)} – společně</div><div class="val">${fmt(P.sum)} <small>/ ${fmt(P.goal)}</small></div>${bar(poolPct)}<div class="pct">${poolPct} % měšce</div></div>`:""}${cards}</div>`;
+  <div class="cards">${P?`<div class="card gold"><div class="ic" style="background:#f5b82e">💰</div><div class="lbl">${esc(P.title)} (${esc(P.unit)})</div><div class="val">${fmt(P.sum)} <small>/ ${fmt(P.goal)}</small></div>${bar(poolPct)}<div class="pct">${poolPct} % rozpočtu</div></div>`:""}${cards}</div>`;
 }
 
 function viewRight(){

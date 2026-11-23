@@ -34,7 +34,7 @@ Na webu v záložce **Zapisování** si člověk vybere sebe a klikne na **✏�
 - Obsah tabulky (jména, čísla) uvidí každý, kdo má odkaz na webovku.
 - Funguje to s **Google Tabulkami**. Excel v OneDrivu takhle z webovky číst nejde, ale soubor .xlsx jde do Google Tabulek normálně nahrát.
 
-## Společný měšec (BJ)
-- Bankovní jednotky jsou **osobní úkol** (kdo má u BJ cíl, má ho dál) **a zároveň** se sloupec „Stav“ u BJ sčítá za všechny dohromady do společného měšce. Je jedno, kdo je zapíše.
-- Na webu je to **měšec zlata 💰** pod letadlem, který se posouvá k ostrovu. Naplní se při **5 500 BJ**.
+## Rozpočet výpravy (BJ)
+- Bankovní jednotky jsou **osobní úkol** (kdo má u BJ cíl, má ho dál) **a zároveň** se sloupec „Stav“ u BJ sčítá za všechny dohromady do rozpočtu výpravy. Je jedno, kdo je zapíše.
+- Na webu je to **měšec zlata 💰** pod letadlem, který se posouvá k ostrovu. Při **5 500 BJ** je rozpočet naplněný a výprava platí.
 - Cíl a název se dají změnit v `config.js` (`pool`).
